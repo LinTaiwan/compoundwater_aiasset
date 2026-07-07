@@ -1,0 +1,514 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0a0a0a;
+    color: #e8e8e8;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .header {
+    margin-bottom: 32px;
+  }
+
+  .brand {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #F5C842;
+    margin-bottom: 8px;
+  }
+
+  .title {
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: #888;
+    line-height: 1.5;
+  }
+
+  .progress-bar {
+    height: 2px;
+    background: #1e1e1e;
+    border-radius: 2px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: #F5C842;
+    transition: width 0.4s ease;
+  }
+
+  .question-card {
+    background: #111;
+    border: 1px solid #1e1e1e;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .question-number {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: #F5C842;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .question-text {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.4;
+    margin-bottom: 16px;
+  }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .option {
+    padding: 12px 16px;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #ccc;
+    transition: all 0.15s;
+    background: #0f0f0f;
+  }
+
+  .option:hover {
+    border-color: #F5C842;
+    color: #fff;
+  }
+
+  .option.selected {
+    border-color: #F5C842;
+    background: rgba(245, 200, 66, 0.08);
+    color: #F5C842;
+  }
+
+  .input-field {
+    width: 100%;
+    padding: 12px 16px;
+    background: #0f0f0f;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    color: #e8e8e8;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .input-field:focus {
+    border-color: #F5C842;
+  }
+
+  .btn {
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: #F5C842;
+    color: #0a0a0a;
+    width: 100%;
+  }
+
+  .btn-primary:hover {
+    background: #f0c030;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .result-card {
+    background: #111;
+    border: 1px solid #1e1e1e;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .result-type {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(245, 200, 66, 0.1);
+    border: 1px solid #F5C842;
+    border-radius: 20px;
+    font-size: 12px;
+    color: #F5C842;
+    margin-bottom: 16px;
+  }
+
+  .result-content {
+    font-size: 14px;
+    line-height: 1.8;
+    color: #ccc;
+    white-space: pre-wrap;
+  }
+
+  .loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+    color: #888;
+    font-size: 14px;
+  }
+
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #2a2a2a;
+    border-top-color: #F5C842;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+  }
+
+  .step-indicator {
+    font-size: 12px;
+    color: #555;
+  }
+
+  .hidden { display: none; }
+
+  .allocation-bars {
+    margin-top: 16px;
+  }
+
+  .bar-item {
+    margin-bottom: 12px;
+  }
+
+  .bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 4px;
+  }
+
+  .bar-track {
+    height: 6px;
+    background: #1e1e1e;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s ease;
+  }
+
+  .restart-btn {
+    margin-top: 16px;
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    color: #888;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .restart-btn:hover {
+    border-color: #555;
+    color: #ccc;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="brand">CompoundWater × AI</div>
+    <div class="title">資產配置規劃</div>
+    <div class="subtitle">回答幾個問題，AI 幫你找到適合自己的配置框架</div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+  </div>
+
+  <div id="questionArea"></div>
+  <div id="loadingArea" class="hidden">
+    <div class="loading">
+      <div class="spinner"></div>
+      <span>AI 正在分析你的狀況...</span>
+    </div>
+  </div>
+  <div id="resultArea" class="hidden"></div>
+</div>
+
+<script>
+const questions = [
+  {
+    id: 'assets',
+    text: '你目前的總資產大概是多少？',
+    type: 'single',
+    options: ['50萬以下', '50-200萬', '200-500萬', '500萬以上']
+  },
+  {
+    id: 'monthly_expense',
+    text: '每個月固定支出大概多少？',
+    type: 'single',
+    options: ['2萬以下', '2-4萬', '4-8萬', '8萬以上']
+  },
+  {
+    id: 'income',
+    text: '目前有穩定收入來源嗎？',
+    type: 'single',
+    options: ['有，每月固定薪水', '有，但不固定（接案/投資）', '目前沒有']
+  },
+  {
+    id: 'drawdown',
+    text: '如果你的資產在一個月內跌了20%，你會怎麼做？',
+    type: 'single',
+    options: ['馬上賣掉止損', '有點焦慮但繼續持有', '冷靜，甚至考慮加倉']
+  },
+  {
+    id: 'loss_impact',
+    text: '這筆錢如果虧掉一半，你的生活會受到影響嗎？',
+    type: 'single',
+    options: ['會，影響很大', '有影響但還能撐', '不會，這是閒錢']
+  },
+  {
+    id: 'goal',
+    text: '這筆錢的主要任務是什麼？',
+    type: 'single',
+    options: ['保本，不要虧', '穩定產生現金流', '長期增值', '短期翻倍']
+  },
+  {
+    id: 'mindset',
+    text: '你現在的心理狀態比較接近哪個？',
+    type: 'single',
+    options: ['保守，剛經歷過虧損', '中性，想穩步前進', '積極，想把握機會']
+  },
+  {
+    id: 'free_cash',
+    text: '你有多少資金是「即使歸零也不影響生活」的？',
+    type: 'single',
+    options: ['幾乎沒有', '10-20%', '30-50%', '50%以上']
+  },
+  {
+    id: 'current_assets',
+    text: '目前的資產主要放在哪裡？（選最主要的）',
+    type: 'single',
+    options: ['現金/定存為主', '台股/美股為主', '加密貨幣為主', '分散各處']
+  },
+  {
+    id: 'concern',
+    text: '你最大的擔憂是什麼？',
+    type: 'single',
+    options: ['錢不夠用', '通膨讓錢縮水', '投資虧損', '不知道怎麼開始']
+  }
+];
+
+let currentQ = 0;
+let answers = {};
+
+function renderQuestion() {
+  const q = questions[currentQ];
+  const progress = ((currentQ) / questions.length) * 100;
+  document.getElementById('progressFill').style.width = progress + '%';
+
+  const html = `
+    <div class="question-card">
+      <div class="question-number">問題 ${currentQ + 1} / ${questions.length}</div>
+      <div class="question-text">${q.text}</div>
+      <div class="options">
+        ${q.options.map((opt, i) => `
+          <div class="option ${answers[q.id] === opt ? 'selected' : ''}" 
+               onclick="selectOption('${q.id}', '${opt}', this)">
+            ${opt}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="nav">
+      <span class="step-indicator">${currentQ + 1} / ${questions.length}</span>
+      <button class="btn btn-primary" id="nextBtn" 
+              onclick="nextQuestion()" 
+              ${answers[q.id] ? '' : 'disabled'}
+              style="width: auto; padding: 12px 24px;">
+        ${currentQ === questions.length - 1 ? '分析我的配置 →' : '下一題 →'}
+      </button>
+    </div>
+  `;
+  document.getElementById('questionArea').innerHTML = html;
+}
+
+function selectOption(qId, value, el) {
+  answers[qId] = value;
+  document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('nextBtn').disabled = false;
+}
+
+function nextQuestion() {
+  if (currentQ < questions.length - 1) {
+    currentQ++;
+    renderQuestion();
+  } else {
+    analyzeWithAI();
+  }
+}
+
+async function analyzeWithAI() {
+  document.getElementById('questionArea').classList.add('hidden');
+  document.getElementById('loadingArea').classList.remove('hidden');
+  document.getElementById('progressFill').style.width = '100%';
+
+  const summary = questions.map(q => `${q.text}: ${answers[q.id]}`).join('\n');
+
+  const prompt = `你是一位專業的資產配置顧問，有6年真實交易經驗，曾經歷兩次千萬獲利和兩次重大虧損，深刻理解風險管理的重要性。
+
+用戶的問卷答案如下：
+${summary}
+
+請根據以上資訊，提供個人化的資產配置建議。格式如下：
+
+【配置類型】
+（防禦型 / 平衡型 / 積極型，一句話說明為什麼）
+
+【核心建議】
+（2-3句話說明這個用戶最需要注意的事）
+
+【建議配置比例】
+- 現金/定存：X%
+- 穩定配息資產（債券/優先股）：X%
+- 成長型資產（股票ETF）：X%
+- 高風險資產（加密貨幣等）：X%
+- 保值資產（黃金）：X%
+
+【每個部位的具體建議】
+（每個部位各1-2句說明放什麼、為什麼）
+
+【最重要的一件事】
+（給這個用戶最關鍵的一句話建議）
+
+語氣要真實、直接，不要過度客套。如果用戶的狀況有風險，要直說。`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+    const result = data.content[0].text;
+    showResult(result);
+  } catch (err) {
+    showResult('分析時發生錯誤，請稍後再試。');
+  }
+}
+
+function showResult(text) {
+  document.getElementById('loadingArea').classList.add('hidden');
+  document.getElementById('resultArea').classList.remove('hidden');
+
+  // Parse allocation percentages for visual bars
+  const barColors = {
+    '現金': '#888780',
+    '配息': '#7F77DD', 
+    '成長': '#378ADD',
+    '高風險': '#E24B4A',
+    '保值': '#EF9F27'
+  };
+
+  const percentages = [];
+  const regex = /[-•]\s*(現金[^：:]*|穩定配息[^：:]*|成長型[^：:]*|高風險[^：:]*|保值[^：:]*)[\s：:]+(\d+)%/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    const label = match[1].trim().substring(0, 6);
+    const pct = parseInt(match[2]);
+    const colorKey = Object.keys(barColors).find(k => label.includes(k)) || '成長';
+    percentages.push({ label, pct, color: barColors[colorKey] });
+  }
+
+  const barsHtml = percentages.length > 0 ? `
+    <div class="allocation-bars">
+      ${percentages.map(item => `
+        <div class="bar-item">
+          <div class="bar-label">
+            <span>${item.label}</span>
+            <span>${item.pct}%</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width: ${item.pct}%; background: ${item.color};"></div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
+
+  document.getElementById('resultArea').innerHTML = `
+    <div class="result-card">
+      <div class="result-type">✦ AI 配置分析報告</div>
+      <div class="result-content">${text}</div>
+      ${barsHtml}
+    </div>
+    <button class="restart-btn" onclick="restart()">← 重新填寫</button>
+  `;
+}
+
+function restart() {
+  currentQ = 0;
+  answers = {};
+  document.getElementById('questionArea').classList.remove('hidden');
+  document.getElementById('resultArea').classList.add('hidden');
+  document.getElementById('progressFill').style.width = '0%';
+  renderQuestion();
+}
+
+renderQuestion();
+</script>
+</body>
+</html>
