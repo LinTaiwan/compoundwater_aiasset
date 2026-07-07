@@ -432,18 +432,26 @@ ${summary}
 語氣要真實、直接，不要過度客套。如果用戶的狀況有風險，要直說。`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
+//    const response = await fetch('https://api.anthropic.com/v1/messages', {
+//      method: 'POST',
+//      headers: { 'Content-Type': 'application/json' },
+//      body: JSON.stringify({
+//        model: 'claude-sonnet-4-6',
+//        max_tokens: 1000,
+//        messages: [{ role: 'user', content: prompt }]
+//      })
+//    });
 
-    const data = await response.json();
-    const result = data.content[0].text;
+//    const data = await response.json();
+//    const result = data.content[0].text;
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt })
+});
+
+      const data = await response.json();
+      const result = data.result;
     showResult(result);
   } catch (err) {
     showResult('分析時發生錯誤，請稍後再試。');
