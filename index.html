@@ -225,24 +225,18 @@ async function analyzeWithAI() {
 用戶的問卷答案如下：
 ${summary}
 
-請回傳一個JSON物件，只回傳JSON不要有任何其他文字或markdown：
+請仔細分析以上答案，根據用戶的真實狀況給出個人化建議。注意：
+- 如果用戶有穩定收入且風險承受度高，高風險資產可以到20-30%
+- 如果用戶沒有收入且剛虧損，現金要50%以上
+- 配置比例必須真實反映用戶狀況，不要給千篇一律的答案
+- type可以是防禦型、平衡型、積極型，要根據答案判斷
+- risk_score要根據用戶真實狀況給1-10的分數
 
-{
-  "type": "防禦型",
-  "type_reason": "一句話說明為什麼是這個類型",
-  "risk_score": 3,
-  "core_advice": "2-3句話說明這個用戶最需要注意的事",
-  "allocation": [
-    { "label": "現金/定存", "percent": 40, "color": "#888780", "advice": "放台幣定存或短天期美債ETF，隨時可動用" },
-    { "label": "配息資產", "percent": 25, "color": "#7F77DD", "advice": "考慮優先股或債券ETF，年化4-6%穩定收息" },
-    { "label": "成長型資產", "percent": 20, "color": "#378ADD", "advice": "台積電或0050，長期持有不要頻繁交易" },
-    { "label": "高風險資產", "percent": 5, "color": "#E24B4A", "advice": "加密貨幣等，比例已很低，不要再加" },
-    { "label": "保值資產", "percent": 10, "color": "#EF9F27", "advice": "黃金ETF，當保險用，不要輕易賣掉" }
-  ],
-  "key_message": "給這個用戶最關鍵的一句話建議"
-}
+只回傳以下格式的JSON，不要有任何其他文字、解釋或markdown符號：
 
-risk_score是1-10，1最保守10最積極。allocation的percent加總必須等於100。語氣真實直接。`;
+{"type":"根據分析填入","type_reason":"一句話說明","risk_score":0,"core_advice":"2-3句話建議","allocation":[{"label":"現金/定存","percent":0,"color":"#888780","advice":"具體建議"},{"label":"配息資產","percent":0,"color":"#7F77DD","advice":"具體建議"},{"label":"成長型資產","percent":0,"color":"#378ADD","advice":"具體建議"},{"label":"高風險資產","percent":0,"color":"#E24B4A","advice":"具體建議"},{"label":"保值資產","percent":0,"color":"#EF9F27","advice":"具體建議"}],"key_message":"最關鍵一句話"}
+
+所有percent填入真實數字，加總必須等於100。`;
 
   try {
     const response = await fetch('/api/chat', {
