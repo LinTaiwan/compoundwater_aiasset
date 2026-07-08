@@ -82,7 +82,7 @@
       </button>
     </div>
     <div class="purchase-link">
-      還沒有驗證碼？<a href="https://compoundwater.gumroad.com/l/ai_finance" target="_blank">點這裡購買（完全免費或可FreeDonate）</a>
+      還沒有驗證碼？<a href="https://compoundwater.gumroad.com/l/ai_finance" target="_blank">點這裡購買（完全免費或可Free donate）</a>
     </div>
   </div>
 
@@ -225,28 +225,26 @@ async function analyzeWithAI() {
 用戶的問卷答案如下：
 ${summary}
 
-請根據以上資訊，提供個人化的資產配置建議。格式如下：
+請根據以上資訊，回傳一個 JSON 物件，格式如下（只回傳JSON，不要有任何其他文字或markdown符號）：
 
-【配置類型】
-（防禦型 / 平衡型 / 積極型，一句話說明為什麼）
+{
+  "type": "防禦型",
+  "type_reason": "一句話說明為什麼是這個類型",
+  "risk_score": 3,
+  "core_advice": "2-3句話說明這個用戶最需要注意的事",
+  "allocation": [
+    { "label": "現金/定存", "percent": 40, "color": "#888780", "advice": "放台幣定存或短天期美債ETF，隨時可動用" },
+    { "label": "配息資產", "percent": 25, "color": "#7F77DD", "advice": "考慮優先股或債券ETF，年化4-6%穩定收息" },
+    { "label": "成長型資產", "percent": 20, "color": "#378ADD", "advice": "台積電或0050，長期持有不要頻繁交易" },
+    { "label": "高風險資產", "percent": 5, "color": "#E24B4A", "advice": "加密貨幣等，比例已很低，不要再加" },
+    { "label": "保值資產", "percent": 10, "color": "#EF9F27", "advice": "黃金ETF，當保險用，不要輕易賣掉" }
+  ],
+  "key_message": "給這個用戶最關鍵的一句話建議"
+}
 
-【核心建議】
-（2-3句話說明這個用戶最需要注意的事）
-
-【建議配置比例】
-- 現金/定存：X%
-- 穩定配息資產（債券/優先股）：X%
-- 成長型資產（股票ETF）：X%
-- 高風險資產（加密貨幣等）：X%
-- 保值資產（黃金）：X%
-
-【每個部位的具體建議】
-（每個部位各1-2句說明放什麼、為什麼）
-
-【最重要的一件事】
-（給這個用戶最關鍵的一句話建議）
-
-語氣要真實、直接，不要過度客套。`;
+risk_score 是1-10的數字，1最保守，10最積極。
+allocation的percent加總必須等於100。
+語氣真實直接，不要客套。`;
 
   try {
     const response = await fetch('/api/chat', {
@@ -256,47 +254,143 @@ ${summary}
     });
 
     const data = await response.json();
-    showResult(data.result);
+    
+    try {
+      const clean = data.result.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      showResult(parsed);
+    } catch(e) {
+      showResultFallback(data.result);
+    }
   } catch (err) {
-    showResult('分析時發生錯誤，請稍後再試。');
+    showResultFallback('分析時發生錯誤，請稍後再試。');
   }
 }
 
-function showResult(text) {
+function showResultFallback(text) {
   document.getElementById('loadingArea').classList.add('hidden');
   document.getElementById('resultArea').classList.remove('hidden');
-
-  const barColors = { '現金': '#888780', '配息': '#7F77DD', '成長': '#378ADD', '高風險': '#E24B4A', '保值': '#EF9F27' };
-  const percentages = [];
-  const regex = /[-•]\s*(現金[^：:]*|穩定配息[^：:]*|成長型[^：:]*|高風險[^：:]*|保值[^：:]*)[\s：:]+(\d+)%/g;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    const label = match[1].trim().substring(0, 6);
-    const pct = parseInt(match[2]);
-    const colorKey = Object.keys(barColors).find(k => label.includes(k)) || '成長';
-    percentages.push({ label, pct, color: barColors[colorKey] });
-  }
-
-  const barsHtml = percentages.length > 0 ? `
-    <div style="margin-top: 16px;">
-      ${percentages.map(item => `
-        <div class="bar-item">
-          <div class="bar-label"><span>${item.label}</span><span>${item.pct}%</span></div>
-          <div class="bar-track">
-            <div class="bar-fill" style="width: ${item.pct}%; background: ${item.color};"></div>
-          </div>
-        </div>
-      `).join('')}
-    </div>` : '';
-
   document.getElementById('resultArea').innerHTML = `
     <div class="result-card">
       <div class="result-type">✦ AI 配置分析報告</div>
       <div class="result-content">${text}</div>
-      ${barsHtml}
     </div>
     <button class="restart-btn" onclick="restart()">← 重新分析</button>
   `;
+}
+
+function showResult(d) {
+  document.getElementById('loadingArea').classList.add('hidden');
+  document.getElementById('resultArea').classList.remove('hidden');
+
+  const typeColors = { '防禦型': '#4CAF7D', '平衡型': '#F5C842', '積極型': '#E24B4A' };
+  const typeColor = typeColors[d.type] || '#F5C842';
+
+  const donutSVG = generateDonut(d.allocation);
+
+  const allocationCards = d.allocation.map(item => `
+    <div style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${item.color};flex-shrink:0;"></div>
+          <span style="font-size:13px;font-weight:500;">${item.label}</span>
+        </div>
+        <span style="font-size:18px;font-weight:600;color:${item.color};">${item.percent}%</span>
+      </div>
+      <div style="height:4px;background:#1e1e1e;border-radius:2px;overflow:hidden;">
+        <div style="height:100%;width:${item.percent}%;background:${item.color};border-radius:2px;transition:width 0.8s ease;"></div>
+      </div>
+      <div style="font-size:12px;color:#666;line-height:1.5;">${item.advice}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('resultArea').innerHTML = `
+    <div style="margin-bottom:16px;">
+      
+      <!-- 類型標題 -->
+      <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:${typeColor};"></div>
+          <span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:${typeColor};">配置類型</span>
+        </div>
+        <div style="font-size:24px;font-weight:600;margin-bottom:6px;">${d.type}</div>
+        <div style="font-size:13px;color:#888;">${d.type_reason}</div>
+      </div>
+
+      <!-- 風險評分 -->
+      <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:12px;">風險評分</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:13px;color:#555;">保守</span>
+          <div style="flex:1;height:6px;background:#1e1e1e;border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${d.risk_score * 10}%;background:linear-gradient(to right,#4CAF7D,#F5C842,#E24B4A);border-radius:3px;"></div>
+          </div>
+          <span style="font-size:13px;color:#555;">積極</span>
+          <span style="font-size:18px;font-weight:600;color:${typeColor};min-width:32px;text-align:right;">${d.risk_score}<span style="font-size:12px;color:#555;">/10</span></span>
+        </div>
+      </div>
+
+      <!-- 圓餅圖 + 配置 -->
+      <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:16px;">建議配置</div>
+        <div style="display:flex;justify-content:center;margin-bottom:20px;">
+          ${donutSVG}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          ${allocationCards}
+        </div>
+      </div>
+
+      <!-- 核心建議 -->
+      <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:10px;">核心建議</div>
+        <div style="font-size:14px;color:#ccc;line-height:1.8;">${d.core_advice}</div>
+      </div>
+
+      <!-- 最重要的一件事 -->
+      <div style="background:rgba(245,200,66,0.06);border:1px solid rgba(245,200,66,0.2);border-radius:12px;padding:20px 24px;margin-bottom:12px;">
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#F5C842;margin-bottom:10px;">✦ 最重要的一件事</div>
+        <div style="font-size:15px;font-weight:500;color:#F5C842;line-height:1.6;">${d.key_message}</div>
+      </div>
+
+    </div>
+    <button class="restart-btn" onclick="restart()">← 重新分析</button>
+  `;
+}
+
+function generateDonut(allocation) {
+  const size = 180;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = 65;
+  const inner = 40;
+  let startAngle = -90;
+  let paths = '';
+
+  allocation.forEach(item => {
+    const angle = (item.percent / 100) * 360;
+    const endAngle = startAngle + angle;
+    const x1 = cx + r * Math.cos((startAngle * Math.PI) / 180);
+    const y1 = cy + r * Math.sin((startAngle * Math.PI) / 180);
+    const x2 = cx + r * Math.cos((endAngle * Math.PI) / 180);
+    const y2 = cy + r * Math.sin((endAngle * Math.PI) / 180);
+    const xi1 = cx + inner * Math.cos((startAngle * Math.PI) / 180);
+    const yi1 = cy + inner * Math.sin((startAngle * Math.PI) / 180);
+    const xi2 = cx + inner * Math.cos((endAngle * Math.PI) / 180);
+    const yi2 = cy + inner * Math.sin((endAngle * Math.PI) / 180);
+    const large = angle > 180 ? 1 : 0;
+
+    paths += `<path d="M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${inner} ${inner} 0 ${large} 0 ${xi1} ${yi1} Z" fill="${item.color}" opacity="0.9"/>`;
+    startAngle = endAngle;
+  });
+
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="#1e1e1e"/>
+    ${paths}
+    <circle cx="${cx}" cy="${cy}" r="${inner}" fill="#111"/>
+    <text x="${cx}" y="${cy - 6}" text-anchor="middle" fill="#e8e8e8" font-size="11" font-family="sans-serif">配置</text>
+    <text x="${cx}" y="${cy + 10}" text-anchor="middle" fill="#e8e8e8" font-size="11" font-family="sans-serif">比例</text>
+  </svg>`;
 }
 
 function restart() {
@@ -307,6 +401,7 @@ function restart() {
   document.getElementById('progressFill').style.width = '0%';
   renderQuestion();
 }
+
 </script>
 </body>
 </html>
