@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
   try {
     const params = new URLSearchParams();
-    params.append('product_permalink', process.env.GUMROAD_PRODUCT_ID);
+    params.append('product_id', process.env.GUMROAD_PRODUCT_ID);
     params.append('license_key', license_key.trim());
     params.append('increment_uses_count', 'true');
 
@@ -24,8 +24,6 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-
-    // Debug用：把Gumroad回傳的資料印出來
     console.log('Gumroad response:', JSON.stringify(data));
 
     if (data.success) {
