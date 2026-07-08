@@ -8,8 +8,14 @@ export default async function handler(req, res) {
   const { prompt } = req.body;
 
   try {
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({ result: '錯誤：API Key 未設定' });
+    }
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -21,10 +27,27 @@ export default async function handler(req, res) {
     );
 
     const data = await response.json();
-    const result = data.candidates[0].content.parts[0].text;
+    
+    // 印出完整回傳內容
+    console.log('Full Gemini response:', JSON.stringify(data));
+
+    // 檢查錯誤
+    if (data.error) {
+      return res.status(500).json({ result: `Gemini錯誤：${data.error.message}` });
+    }
+
+    // 安全取值
+    const result = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!result) {
+      return res.status(500).json({ 
+        result: `回傳格式異常：${JSON.stringify(data).substring(0, 200)}` 
+      });
+    }
+
     res.status(200).json({ result });
   } catch (err) {
-    console.error('Gemini error:', err);
-    res.status(500).json({ result: '分析時發生錯誤，請稍後再試。' });
+    console.error('Catch error:', err.message);
+    res.status(500).json({ result: `錯誤：${err.message}` });
   }
 }
