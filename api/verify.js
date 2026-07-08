@@ -11,6 +11,12 @@ export default async function handler(req, res) {
     return res.status(400).json({ valid: false, message: '請輸入驗證碼' });
   }
 
+  // 管理員bypass（從環境變數讀取，不寫死在程式碼裡）
+  const adminKey = process.env.ADMIN_KEY;
+  if (adminKey && license_key.trim() === adminKey) {
+    return res.status(200).json({ valid: true });
+  }
+
   try {
     const params = new URLSearchParams();
     params.append('product_id', process.env.GUMROAD_PRODUCT_ID);
