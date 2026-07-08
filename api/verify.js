@@ -7,28 +7,43 @@ export default async function handler(req, res) {
 
   const { license_key } = req.body;
 
-  if (!license_key) {
+  if (!license_key || license_key.trim() === '') {
     return res.status(400).json({ valid: false, message: '請輸入驗證碼' });
   }
 
-  const response = await fetch('https://api.gumroad.com/v2/licenses/verify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      product_permalink: process.env.GUMROAD_PRODUCT_ID,
-      license_key: license_key,
-      increment_uses_count: 'true'
-    })
-  });
+  try {
+    const params = new URLSearchParams();
+    params.append('product_permalink', process.env.GUMROAD_PRODUCT_ID);
+    params.append('license_key', license_key.trim());
+    params.append('increment_uses_count', 'true');
 
-  const data = await response.json();
+    const response = await fetch('https://api.gumroad.com/v2/licenses/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
 
-  if (data.success) {
-    if (data.uses > 1) {
-      return res.status(400).json({ valid: false, message: '此驗證碼已使用過' });
+    const data = await response.json();
+
+    // Debug用：把Gumroad回傳的資料印出來
+    console.log('Gumroad response:', JSON.stringify(data));
+
+    if (data.success) {
+      if (data.purchase && data.purchase.refunded) {
+        return res.status(400).json({ valid: false, message: '此訂單已退款' });
+      }
+      if (data.uses > 1) {
+        return res.status(400).json({ valid: false, message: '此驗證碼已使用過' });
+      }
+      res.status(200).json({ valid: true });
+    } else {
+      res.status(400).json({ 
+        valid: false, 
+        message: data.message || '驗證碼無效，請確認輸入正確' 
+      });
     }
-    res.status(200).json({ valid: true });
-  } else {
-    res.status(400).json({ valid: false, message: '驗證碼無效，請確認輸入正確' });
+  } catch (err) {
+    console.error('Verify error:', err);
+    res.status(500).json({ valid: false, message: '驗證服務暫時無法使用，請稍後再試' });
   }
 }
