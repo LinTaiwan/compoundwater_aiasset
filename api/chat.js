@@ -21,33 +21,25 @@ export default async function handler(req, res) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 3000 }
+          generationConfig: { maxOutputTokens: 4000 }
         })
       }
     );
 
     const data = await response.json();
-    
-    // 印出完整回傳內容
-    console.log('Full Gemini response:', JSON.stringify(data));
 
-    // 檢查錯誤
     if (data.error) {
       return res.status(500).json({ result: `Gemini錯誤：${data.error.message}` });
     }
 
-    // 安全取值
     const result = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!result) {
-      return res.status(500).json({ 
-        result: `回傳格式異常：${JSON.stringify(data).substring(0, 200)}` 
-      });
+      return res.status(500).json({ result: '分析結果為空，請稍後再試' });
     }
 
     res.status(200).json({ result });
   } catch (err) {
-    console.error('Catch error:', err.message);
     res.status(500).json({ result: `錯誤：${err.message}` });
   }
 }
