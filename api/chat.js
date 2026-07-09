@@ -5,49 +5,77 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { license_key } = req.body;
-
-  if (!license_key || license_key.trim() === '') {
-    return res.status(400).json({ valid: false, message: '請輸入驗證碼' });
-  }
-
-  // 管理員bypass（從環境變數讀取，不寫死在程式碼裡）
-  const adminKey = process.env.ADMIN_KEY;
-  if (adminKey && license_key.trim() === adminKey) {
-    return res.status(200).json({ valid: true });
-  }
+  const { prompt } = req.body;
 
   try {
-    const params = new URLSearchParams();
-    params.append('product_id', process.env.GUMROAD_PRODUCT_ID);
-    params.append('license_key', license_key.trim());
-    params.append('increment_uses_count', 'true');
+    const apiKey = process.env.GEMINI_API_KEY;
 
-    const response = await fetch('https://api.gumroad.com/v2/licenses/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString()
-    });
+    if (!apiKey) {
+      return res.status(500).json({ result: '錯誤：API Key 未設定' });
+    }
+
+    const requestBody = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        maxOutputTokens: 4000,
+        temperature: 0.7,
+        response_mime_type: 'application/json',
+        response_schema: {
+          type: 'OBJECT',
+          properties: {
+            type: { type: 'STRING' },
+            type_reason: { type: 'STRING' },
+            risk_score: { type: 'NUMBER' },
+            core_advice: { type: 'STRING' },
+            allocation: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  label: { type: 'STRING' },
+                  percent: { type: 'NUMBER' },
+                  color: { type: 'STRING' },
+                  advice: { type: 'STRING' }
+                },
+                required: ['label', 'percent', 'color', 'advice']
+              }
+            },
+            key_message: { type: 'STRING' }
+          },
+          required: ['type', 'type_reason', 'risk_score', 'core_advice', 'allocation', 'key_message']
+        }
+      }
+    };
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      }
+    );
 
     const data = await response.json();
-    console.log('Gumroad response:', JSON.stringify(data));
+    console.log('Gemini response status:', response.status);
 
-    if (data.success) {
-      if (data.purchase && data.purchase.refunded) {
-        return res.status(400).json({ valid: false, message: '此訂單已退款' });
-      }
-      if (data.uses > 1) {
-        return res.status(400).json({ valid: false, message: '此驗證碼已使用過' });
-      }
-      res.status(200).json({ valid: true });
-    } else {
-      res.status(400).json({ 
-        valid: false, 
-        message: data.message || '驗證碼無效，請確認輸入正確' 
-      });
+    if (data.error) {
+      return res.status(500).json({ result: `Gemini錯誤：${data.error.message}` });
     }
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!text) {
+      console.error('Empty response:', JSON.stringify(data));
+      return res.status(500).json({ result: '回傳結果為空，請稍後再試' });
+    }
+
+    // JSON Mode 保證回傳是合法 JSON，直接解析
+    const parsed = JSON.parse(text);
+    res.status(200).json({ result: parsed });
+
   } catch (err) {
-    console.error('Verify error:', err);
-    res.status(500).json({ valid: false, message: '驗證服務暫時無法使用，請稍後再試' });
+    console.error('Error:', err.message);
+    res.status(500).json({ result: `錯誤：${err.message}` });
   }
 }
