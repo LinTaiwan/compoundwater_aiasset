@@ -691,17 +691,22 @@ async function exportPDF() {
     const { jsPDF } = window.jspdf;
     const pageWidthMM = 210;
 
-    const bodyWidthMM = pageWidthMM;
+    // 頁面左右留白邊距，讓內容置中且周圍有呼吸空間
+    const marginMM = 14;
+    const contentWidthMM = pageWidthMM - marginMM * 2;
+
+    const bodyWidthMM = contentWidthMM;
     const bodyHeightMM = (bodyCanvas.height * bodyWidthMM) / bodyCanvas.width;
 
     let headerHeightMM = 0;
+    const headerWidthMM = contentWidthMM;
     if (headerCanvas) {
-      headerHeightMM = (headerCanvas.height * pageWidthMM) / headerCanvas.width;
+      headerHeightMM = (headerCanvas.height * headerWidthMM) / headerCanvas.width;
     }
 
     // 頁首與內容間留一點間距，並在頁首下方模擬黃色底線
     const headerGap = headerCanvas ? 6 : 0;
-    const totalHeightMM = 10 + headerHeightMM + headerGap + bodyHeightMM + 10;
+    const totalHeightMM = marginMM + headerHeightMM + headerGap + bodyHeightMM + marginMM;
 
     const pdf = new jsPDF({
       orientation: 'p',
@@ -713,19 +718,19 @@ async function exportPDF() {
     pdf.setFillColor(10, 10, 10);
     pdf.rect(0, 0, pageWidthMM, totalHeightMM, 'F');
 
-    let cursorY = 10;
+    let cursorY = marginMM;
 
     if (headerCanvas) {
-      pdf.addImage(headerCanvas.toDataURL('image/png'), 'PNG', 0, cursorY, pageWidthMM, headerHeightMM);
+      pdf.addImage(headerCanvas.toDataURL('image/png'), 'PNG', marginMM, cursorY, headerWidthMM, headerHeightMM);
       cursorY += headerHeightMM;
-      // 黃色底線，呼應網頁上 logo 下方的進度條
+      // 黃色底線，呼應網頁上 logo 下方的進度條（與內容同寬、置中）
       pdf.setDrawColor(245, 200, 66);
       pdf.setFillColor(245, 200, 66);
-      pdf.rect(0, cursorY + 2, pageWidthMM, 1, 'F');
+      pdf.rect(marginMM, cursorY + 2, contentWidthMM, 1, 'F');
       cursorY += 2 + headerGap;
     }
 
-    pdf.addImage(bodyCanvas.toDataURL('image/png'), 'PNG', 0, cursorY, bodyWidthMM, bodyHeightMM);
+    pdf.addImage(bodyCanvas.toDataURL('image/png'), 'PNG', marginMM, cursorY, bodyWidthMM, bodyHeightMM);
 
     const dateStr = new Date().toLocaleDateString('zh-TW').replace(/\//g, '');
     pdf.save(`CompoundWater_資產配置報告_${dateStr}.pdf`);
