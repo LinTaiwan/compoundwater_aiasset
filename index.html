@@ -662,10 +662,10 @@ async function generateShareCard() {
   const donutCanvasId = 'shareDonut_' + Date.now();
 
   const legendItems = d.allocation.map(item => `
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
       <div style="width:16px;height:16px;border-radius:4px;background:${item.color};flex-shrink:0;"></div>
-      <span style="font-size:24px;color:#ccc;flex:1;">${escapeHtml(item.label)}</span>
-      <span style="font-size:24px;font-weight:600;color:#f0f0f0;">${item.percent}%</span>
+      <span style="font-size:24px;color:#ccc;white-space:nowrap;">${escapeHtml(item.label)}</span>
+      <span style="font-size:24px;font-weight:600;color:#f0f0f0;margin-left:6px;">${item.percent}%</span>
     </div>
   `).join('');
 
@@ -673,21 +673,21 @@ async function generateShareCard() {
     <div style="display:flex; align-items:center; gap:14px; margin-bottom:36px; flex-shrink:0;">
       <img src="${document.querySelector('link[rel="apple-touch-icon"]').href}" style="width:52px;height:52px;border-radius:50%;">
       <div>
-        <div style="font-size:20px;letter-spacing:0.1em;color:#F5C842;font-weight:600;text-transform:uppercase;">CompoundWater × AI</div>
+        <div style="font-size:30px;letter-spacing:0.08em;color:#F5C842;font-weight:700;text-transform:uppercase;">CompoundWater × AI</div>
         <div style="font-size:15px;color:#666;margin-top:3px;">資產配置分析</div>
       </div>
     </div>
 
     <div style="margin-bottom:36px; flex-shrink:0;">
       <div style="font-size:18px;color:${typeColor};letter-spacing:0.05em;margin-bottom:8px;">配置類型</div>
-      <div style="font-size:64px;font-weight:700;color:#f5f5f5;line-height:1.15;">${escapeHtml(d.type)}</div>
+      <div style="font-size:50px;font-weight:700;color:#f5f5f5;line-height:1.15;">${escapeHtml(d.type)}</div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:40px;height:380px;flex-shrink:0;">
-      <div style="flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:20px;height:380px;flex-shrink:0;">
+      <div style="flex-shrink:0;margin-left:12px;">
         <canvas id="${donutCanvasId}" width="640" height="640" style="width:320px;height:320px;"></canvas>
       </div>
-      <div style="flex:1;min-width:0;">
+      <div style="flex-shrink:0;">
         ${legendItems}
       </div>
     </div>
