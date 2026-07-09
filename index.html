@@ -397,9 +397,9 @@ ${summary}
 
 只回傳以下格式的JSON，不要有任何其他文字、解釋或markdown符號：
 
-{"type":"根據分析填入","type_reason":"一句話說明","risk_score":0,"core_advice":"2-3句話建議","allocation":[{"label":"現金/定存","percent":0,"color":"#888780","advice":"具體建議"},{"label":"配息資產","percent":0,"color":"#7F77DD","advice":"具體建議"},{"label":"成長型資產","percent":0,"color":"#378ADD","advice":"具體建議"},{"label":"高風險資產","percent":0,"color":"#E24B4A","advice":"具體建議"},{"label":"保值資產","percent":0,"color":"#EF9F27","advice":"具體建議"}],"key_message":"最關鍵一句話"}
+{"type":"根據分析填入","type_reason":"一句話說明","risk_score":0,"core_advice":"2-3句話建議","allocation":[{"label":"現金/定存","percent":0,"color":"#888780","advice":"具體建議"},{"label":"配息與保值資產","percent":0,"color":"#7F77DD","advice":"具體建議"},{"label":"成長型資產","percent":0,"color":"#378ADD","advice":"具體建議"},{"label":"高風險資產","percent":0,"color":"#E24B4A","advice":"具體建議"}],"key_message":"最關鍵一句話"}
 
-所有percent填入真實數字，加總必須等於100。
+所有percent填入真實數字，加總必須等於100。「配息與保值資產」這一類請合併涵蓋債券、優先股、REITs、黃金等產生穩定收益或保值功能的資產，advice中可視情況分別提及。
 每個 allocation 的 advice 要具體說明放哪個產品、為什麼，以及一句提醒或注意事項，約2-3句話。
 core_advice 要針對用戶的真實痛點和資產現況給出具體建議，3-4句話。`;
 
@@ -502,9 +502,9 @@ function showResult(d) {
         <div style="font-size:15px;font-weight:500;color:#F5C842;line-height:1.6;">${d.key_message}</div>
       </div>
 
-      <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
-        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:10px;">核心建議</div>
-        <div style="font-size:14px;color:#ccc;line-height:1.8;">${d.core_advice}</div>
+      <div style="background:rgba(90,160,255,0.08);border:1px solid rgba(90,160,255,0.25);border-radius:12px;padding:20px 24px;margin-bottom:12px;">
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#5AA0FF;margin-bottom:10px;">核心建議</div>
+        <div style="font-size:14px;color:#dce8ff;line-height:1.8;">${d.core_advice}</div>
       </div>
 
       <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
