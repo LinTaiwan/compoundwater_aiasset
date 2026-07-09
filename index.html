@@ -108,7 +108,7 @@ const questions = [
     note: '前四項建議加總 100%，負債單獨填寫',
     fields: [
       { id: 'alloc_cash', label: '流動資金', sublabel: '現金／定存等', color: '#888780' },
-      { id: 'alloc_stock', label: '投資股票', sublabel: '台股／美股', color: '#378ADD' },
+      { id: 'alloc_stock', label: '投資(股票/貴金屬)', sublabel: '台股／美股／黃金', color: '#378ADD' },
       { id: 'alloc_crypto', label: '投資加密貨幣', sublabel: 'BTC／ETH 等', color: '#F5C842' },
       { id: 'alloc_property', label: '固定資產', sublabel: '房產／車等', color: '#4CAF7D' },
       { id: 'alloc_debt', label: '負債', sublabel: '房貸／車貸等（佔總資產%）', color: '#E24B4A', separate: true }
@@ -184,8 +184,13 @@ function renderQuestion() {
   const progress = (currentQ / questions.length) * 100;
   document.getElementById('progressFill').style.width = progress + '%';
 
-  const sectionHtml = q.section ? `
-    <div style="font-size:11px;letter-spacing:0.12em;color:#F5C842;margin-bottom:12px;font-weight:500;">${q.section}</div>
+  // 往前找最近定義的 section，讓每一題都顯示所屬區塊
+  let currentSection = '';
+  for (let i = currentQ; i >= 0; i--) {
+    if (questions[i].section) { currentSection = questions[i].section; break; }
+  }
+  const sectionHtml = currentSection ? `
+    <div style="font-size:11px;letter-spacing:0.12em;color:#F5C842;margin-bottom:12px;font-weight:500;">${currentSection}</div>
   ` : '';
 
   let inputHtml = '';
