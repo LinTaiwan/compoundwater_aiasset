@@ -260,38 +260,11 @@ ${summary}
       body: JSON.stringify({ prompt })
     });
     const data = await response.json();
-    try {
-      let clean = data.result
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/```\s*$/i, '')
-        .trim();
-      
-      // 如果JSON不完整，嘗試找到最後一個完整的 } 來補全
-      const firstBrace = clean.indexOf('{');
-      if (firstBrace > 0) clean = clean.slice(firstBrace);
-      
-      // 嘗試直接解析
-      let parsed;
-      try {
-        parsed = JSON.parse(clean);
-      } catch(e1) {
-        // 嘗試找到最後完整的 allocation 項目並補全 JSON
-        const lastCompleteItem = clean.lastIndexOf('},');
-        if (lastCompleteItem > 0) {
-          const truncated = clean.slice(0, lastCompleteItem + 1) + '],"key_message":"請根據你的狀況保守配置，以保本為優先。"}';
-          try {
-            parsed = JSON.parse(truncated);
-          } catch(e2) {
-            throw e2;
-          }
-        } else {
-          throw e1;
-        }
-      }
-      showResult(parsed);
-    } catch(e) {
-      showResultFallback(data.result);
+    // JSON Mode 保證 data.result 直接是物件，不需要解析
+    if (data.result && typeof data.result === 'object') {
+      showResult(data.result);
+    } else {
+      showResultFallback(typeof data.result === 'string' ? data.result : '分析時發生錯誤，請稍後再試。');
     }
   } catch (err) {
     showResultFallback('分析時發生錯誤，請稍後再試。');
