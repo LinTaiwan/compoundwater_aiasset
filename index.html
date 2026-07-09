@@ -67,26 +67,7 @@
     <div class="progress-fill" id="progressFill" style="width: 0%"></div>
   </div>
 
-  <!-- 驗證碼畫面：保留但預設隱藏，未來可能用於解鎖更多功能，目前先移到結果頁下方 -->
-  <div id="accessScreen" class="hidden">
-    <div class="question-card">
-      <div class="question-number">驗證碼</div>
-      <div class="question-text">請輸入購買後收到的驗證碼（免費使用，避免過度燒Token防呆哈～）</div>
-      <input type="text" id="licenseKey" class="input-field"
-             placeholder="例如：XXXX-XXXX-XXXX-XXXX"
-             onkeydown="if(event.key==='Enter') verifyKey()">
-      <div class="error-text" id="keyError"></div>
-      <button class="btn btn-primary" id="verifyBtn"
-              onclick="verifyKey()" style="margin-top: 12px;">
-        驗證 →
-      </button>
-    </div>
-    <div class="purchase-link">
-      還沒有驗證碼？<a href="https://compoundwater.gumroad.com/l/ai_finance" target="_blank">點這裡購買（完全免費或可Free donate）</a>
-    </div>
-  </div>
-
-  <!-- 問卷主體：現在直接顯示，不再擋驗證 -->
+  <!-- 問卷主體：直接顯示，驗證碼輸入框改放在結果頁最下方（見 showResult） -->
   <div id="mainApp">
     <div id="questionArea"></div>
     <div id="loadingArea" class="hidden">
@@ -130,6 +111,40 @@ const questions = [
 
 let currentQ = 0;
 let answers = {};
+
+// 共用工具：HTML escape，避免使用者輸入或AI回傳文字中的特殊字元被當成HTML/程式碼執行
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// 共用區塊：隱私聲明 + 社群連結（原本重複貼在多處，現在統一由這個函式產生）
+function renderFooterNotice() {
+  return `
+    <div style="margin-top:16px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid #1e1e1e;border-radius:8px;">
+      <span style="font-size:13px;color:#999;line-height:1.6;">本站數據僅用於當次 AI 運算，提供之結果不是財務建議僅供參考，且不儲存任何您的個人財產隱私。</span>
+    <div style="margin-top:12px;display:flex;align-items:center;justify-content:flex-start;gap:14px;">
+      <a href="https://x.com/compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="X">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+      <a href="https://instagram.com/compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="Instagram">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      </a>
+      <a href="https://www.threads.net/@compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="Threads">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.469 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.021-5.11.973-6.54 2.83-1.34 1.739-2.031 4.244-2.058 7.443.027 3.199.718 5.704 2.058 7.443 1.43 1.857 3.63 2.809 6.54 2.83 2.623-.02 4.358-.63 5.79-2.045 1.629-1.612 1.6-3.594 1.077-4.785-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.104-2.14 1.702-3.73 1.727-1.207.02-2.372-.271-3.283-.855-1.079-.694-1.706-1.752-1.744-2.987-.038-1.201.443-2.334 1.36-3.164.94-.85 2.262-1.31 3.909-1.324a10.5 10.5 0 0 1 2.354.238c-.11-.612-.34-1.078-.685-1.383-.502-.443-1.302-.663-2.376-.663h-.024c-1.052 0-2.038.29-2.887.84l-1.19-1.717c1.147-.767 2.548-1.16 4.06-1.156h.024c1.667 0 3.001.417 3.966 1.24.999.852 1.539 2.075 1.61 3.635a9.5 9.5 0 0 1 1.72.717c1.517.83 2.517 2.157 2.816 3.737.4 2.114-.05 4.484-2.216 6.614-1.87 1.837-4.18 2.667-7.501 2.69z"/></svg>
+      </a>
+      <a href="https://t.me/compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="Telegram">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.94 4.14a1.5 1.5 0 0 0-1.53-.25L2.6 10.62a1.5 1.5 0 0 0 .07 2.83l4.75 1.5 1.83 5.9a1.5 1.5 0 0 0 2.5.62l2.6-2.53 4.65 3.42a1.5 1.5 0 0 0 2.37-.9l3-16.5a1.5 1.5 0 0 0-.43-1.32zM9.3 14.5l-1.2 4-1.05-3.4L17.8 8.2z"/></svg>
+      </a>
+    </div>
+    </div>
+  `;
+}
 
 // 驗證碼驗證
 async function verifyKey() {
@@ -214,7 +229,7 @@ function renderQuestion() {
         oninput="selectText('${q.id}', this.value)"
         style="width:100%;min-height:100px;padding:12px 16px;background:#0f0f0f;border:1px solid #2a2a2a;border-radius:8px;color:#e8e8e8;font-size:14px;outline:none;resize:vertical;line-height:1.6;font-family:inherit;"
         onfocus="this.style.borderColor='#F5C842'"
-        onblur="this.style.borderColor='#2a2a2a'">${answers[q.id] || ''}</textarea>
+        onblur="this.style.borderColor='#2a2a2a'">${escapeHtml(answers[q.id] || '')}</textarea>
     `;
   } else if (q.type === 'allocation') {
     const currentAlloc = answers[q.id] || {};
@@ -296,23 +311,7 @@ function renderQuestion() {
         ${currentQ === questions.length - 1 ? '分析我的配置 →' : '下一題 →'}
       </button>
     </div>
-    <div style="margin-top:16px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid #1e1e1e;border-radius:8px;">
-      <span style="font-size:13px;color:#999;line-height:1.6;">本站數據僅用於當次 AI 運算，提供之結果不是財務建議僅供參考，且不儲存任何您的個人財產隱私。</span>
-    <div style="margin-top:12px;display:flex;align-items:center;justify-content:flex-start;gap:14px;">
-      <a href="https://x.com/compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="X">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-      </a>
-      <a href="https://instagram.com/compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="Instagram">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-      </a>
-      <a href="https://www.threads.net/@compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="Threads">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.469 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.021-5.11.973-6.54 2.83-1.34 1.739-2.031 4.244-2.058 7.443.027 3.199.718 5.704 2.058 7.443 1.43 1.857 3.63 2.809 6.54 2.83 2.623-.02 4.358-.63 5.79-2.045 1.629-1.612 1.6-3.594 1.077-4.785-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.104-2.14 1.702-3.73 1.727-1.207.02-2.372-.271-3.283-.855-1.079-.694-1.706-1.752-1.744-2.987-.038-1.201.443-2.334 1.36-3.164.94-.85 2.262-1.31 3.909-1.324a10.5 10.5 0 0 1 2.354.238c-.11-.612-.34-1.078-.685-1.383-.502-.443-1.302-.663-2.376-.663h-.024c-1.052 0-2.038.29-2.887.84l-1.19-1.717c1.147-.767 2.548-1.16 4.06-1.156h.024c1.667 0 3.001.417 3.966 1.24.999.852 1.539 2.075 1.61 3.635a9.5 9.5 0 0 1 1.72.717c1.517.83 2.517 2.157 2.816 3.737.4 2.114-.05 4.484-2.216 6.614-1.87 1.837-4.18 2.667-7.501 2.69z"/></svg>
-      </a>
-      <a href="https://t.me/compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="Telegram">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.94 4.14a1.5 1.5 0 0 0-1.53-.25L2.6 10.62a1.5 1.5 0 0 0 .07 2.83l4.75 1.5 1.83 5.9a1.5 1.5 0 0 0 2.5.62l2.6-2.53 4.65 3.42a1.5 1.5 0 0 0 2.37-.9l3-16.5a1.5 1.5 0 0 0-.43-1.32zM9.3 14.5l-1.2 4-1.05-3.4L17.8 8.2z"/></svg>
-      </a>
-    </div>
-    </div>
+${renderFooterNotice()}
   `;
 }
 
@@ -432,25 +431,9 @@ function showResultFallback(text) {
   document.getElementById('resultArea').innerHTML = `
     <div class="result-card">
       <div class="result-type">✦ AI 配置分析報告</div>
-      <div class="result-content">${text}</div>
+      <div class="result-content">${escapeHtml(text)}</div>
     </div>
-    <div style="margin-top:16px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid #1e1e1e;border-radius:8px;">
-      <span style="font-size:13px;color:#999;line-height:1.6;">本站數據僅用於當次 AI 運算，提供之結果不是財務建議僅供參考，且不儲存任何您的個人財產隱私。</span>
-    <div style="margin-top:12px;display:flex;align-items:center;justify-content:flex-start;gap:14px;">
-      <a href="https://x.com/compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="X">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-      </a>
-      <a href="https://instagram.com/compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="Instagram">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-      </a>
-      <a href="https://www.threads.net/@compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="Threads">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.469 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.021-5.11.973-6.54 2.83-1.34 1.739-2.031 4.244-2.058 7.443.027 3.199.718 5.704 2.058 7.443 1.43 1.857 3.63 2.809 6.54 2.83 2.623-.02 4.358-.63 5.79-2.045 1.629-1.612 1.6-3.594 1.077-4.785-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.104-2.14 1.702-3.73 1.727-1.207.02-2.372-.271-3.283-.855-1.079-.694-1.706-1.752-1.744-2.987-.038-1.201.443-2.334 1.36-3.164.94-.85 2.262-1.31 3.909-1.324a10.5 10.5 0 0 1 2.354.238c-.11-.612-.34-1.078-.685-1.383-.502-.443-1.302-.663-2.376-.663h-.024c-1.052 0-2.038.29-2.887.84l-1.19-1.717c1.147-.767 2.548-1.16 4.06-1.156h.024c1.667 0 3.001.417 3.966 1.24.999.852 1.539 2.075 1.61 3.635a9.5 9.5 0 0 1 1.72.717c1.517.83 2.517 2.157 2.816 3.737.4 2.114-.05 4.484-2.216 6.614-1.87 1.837-4.18 2.667-7.501 2.69z"/></svg>
-      </a>
-      <a href="https://t.me/compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="Telegram">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.94 4.14a1.5 1.5 0 0 0-1.53-.25L2.6 10.62a1.5 1.5 0 0 0 .07 2.83l4.75 1.5 1.83 5.9a1.5 1.5 0 0 0 2.5.62l2.6-2.53 4.65 3.42a1.5 1.5 0 0 0 2.37-.9l3-16.5a1.5 1.5 0 0 0-.43-1.32zM9.3 14.5l-1.2 4-1.05-3.4L17.8 8.2z"/></svg>
-      </a>
-    </div>
-    </div>
+${renderFooterNotice()}
     <button class="restart-btn" onclick="restart()">← 重新分析</button>
   `;
 }
@@ -469,14 +452,14 @@ function showResult(d) {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="width:8px;height:8px;border-radius:50%;background:${item.color};flex-shrink:0;"></div>
-          <span style="font-size:13px;font-weight:500;color:#e8e8e8;">${item.label}</span>
+          <span style="font-size:13px;font-weight:500;color:#e8e8e8;">${escapeHtml(item.label)}</span>
         </div>
         <span style="font-size:16px;font-weight:500;color:${item.color};">${item.percent}%</span>
       </div>
       <div style="height:4px;background:#1e1e1e;border-radius:2px;overflow:hidden;margin-bottom:6px;">
         <div class="alloc-bar" style="height:100%;width:0%;background:${item.color};border-radius:2px;transition:width 1s cubic-bezier(0.16, 1, 0.3, 1);"></div>
       </div>
-      <div style="font-size:12px;color:#666;line-height:1.5;">${item.advice}</div>
+      <div style="font-size:12px;color:#666;line-height:1.5;">${escapeHtml(item.advice)}</div>
     </div>
   `).join('');
 
@@ -484,7 +467,7 @@ function showResult(d) {
     <div class="legend-item" data-idx="${idx}" onclick="highlightSlice(${idx})"
       style="display:flex;align-items:center;gap:6px;font-size:12px;color:#888;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background 0.15s;">
       <div style="width:10px;height:10px;border-radius:2px;background:${item.color};flex-shrink:0;"></div>
-      <span>${item.label} ${item.percent}%</span>
+      <span>${escapeHtml(item.label)} ${item.percent}%</span>
     </div>
   `).join('');
 
@@ -499,12 +482,12 @@ function showResult(d) {
 
       <div style="background:rgba(245,200,66,0.06);border:1px solid rgba(245,200,66,0.2);border-radius:12px;padding:20px 24px;margin-bottom:12px;">
         <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#F5C842;margin-bottom:8px;">✦ 最重要的一件事</div>
-        <div style="font-size:15px;font-weight:500;color:#F5C842;line-height:1.6;">${d.key_message}</div>
+        <div style="font-size:15px;font-weight:500;color:#F5C842;line-height:1.6;">${escapeHtml(d.key_message)}</div>
       </div>
 
       <div style="background:rgba(90,160,255,0.08);border:1px solid rgba(90,160,255,0.25);border-radius:12px;padding:20px 24px;margin-bottom:12px;">
         <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#5AA0FF;margin-bottom:10px;">核心建議</div>
-        <div style="font-size:14px;color:#dce8ff;line-height:1.8;">${d.core_advice}</div>
+        <div style="font-size:14px;color:#dce8ff;line-height:1.8;">${escapeHtml(d.core_advice)}</div>
       </div>
 
       <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
@@ -513,8 +496,8 @@ function showResult(d) {
             <div style="margin-bottom:8px;">
               <span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#e8e8e8;">配置類型</span>
             </div>
-            <div style="font-size:24px;font-weight:500;margin-bottom:4px;color:#e8e8e8;">${d.type}</div>
-            <div style="font-size:13px;color:#888;line-height:1.5;">${d.type_reason}</div>
+            <div style="font-size:24px;font-weight:500;margin-bottom:4px;color:#e8e8e8;">${escapeHtml(d.type)}</div>
+            <div style="font-size:13px;color:#888;line-height:1.5;">${escapeHtml(d.type_reason)}</div>
           </div>
           <div style="flex-shrink:0;">
             ${gaugeSVG}
@@ -539,23 +522,7 @@ function showResult(d) {
       </div>
 
     </div>
-    <div style="margin-top:16px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid #1e1e1e;border-radius:8px;">
-      <span style="font-size:13px;color:#999;line-height:1.6;">本站數據僅用於當次 AI 運算，提供之結果不是財務建議僅供參考，且不儲存任何您的個人財產隱私。</span>
-    <div style="margin-top:12px;display:flex;align-items:center;justify-content:flex-start;gap:14px;">
-      <a href="https://x.com/compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="X">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-      </a>
-      <a href="https://instagram.com/compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="Instagram">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-      </a>
-      <a href="https://www.threads.net/@compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="Threads">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.469 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.021-5.11.973-6.54 2.83-1.34 1.739-2.031 4.244-2.058 7.443.027 3.199.718 5.704 2.058 7.443 1.43 1.857 3.63 2.809 6.54 2.83 2.623-.02 4.358-.63 5.79-2.045 1.629-1.612 1.6-3.594 1.077-4.785-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.104-2.14 1.702-3.73 1.727-1.207.02-2.372-.271-3.283-.855-1.079-.694-1.706-1.752-1.744-2.987-.038-1.201.443-2.334 1.36-3.164.94-.85 2.262-1.31 3.909-1.324a10.5 10.5 0 0 1 2.354.238c-.11-.612-.34-1.078-.685-1.383-.502-.443-1.302-.663-2.376-.663h-.024c-1.052 0-2.038.29-2.887.84l-1.19-1.717c1.147-.767 2.548-1.16 4.06-1.156h.024c1.667 0 3.001.417 3.966 1.24.999.852 1.539 2.075 1.61 3.635a9.5 9.5 0 0 1 1.72.717c1.517.83 2.517 2.157 2.816 3.737.4 2.114-.05 4.484-2.216 6.614-1.87 1.837-4.18 2.667-7.501 2.69z"/></svg>
-      </a>
-      <a href="https://t.me/compoundwater" target="_blank" style="color:#555;transition:color 0.15s;" onmouseover="this.style.color='#F5C842'" onmouseout="this.style.color='#555'" aria-label="Telegram">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.94 4.14a1.5 1.5 0 0 0-1.53-.25L2.6 10.62a1.5 1.5 0 0 0 .07 2.83l4.75 1.5 1.83 5.9a1.5 1.5 0 0 0 2.5.62l2.6-2.53 4.65 3.42a1.5 1.5 0 0 0 2.37-.9l3-16.5a1.5 1.5 0 0 0-.43-1.32zM9.3 14.5l-1.2 4-1.05-3.4L17.8 8.2z"/></svg>
-      </a>
-    </div>
-    </div>
+${renderFooterNotice()}
 
     <button id="exportPdfBtn" onclick="exportPDF()"
       style="width:100%;margin-top:16px;padding:16px 24px;background:linear-gradient(135deg, #F5C842 0%, #f0a830 100%);color:#0a0a0a;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s ease;box-shadow:0 4px 16px rgba(245,200,66,0.25);"
