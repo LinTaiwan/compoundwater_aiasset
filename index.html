@@ -71,7 +71,7 @@
   <div id="accessScreen">
     <div class="question-card">
       <div class="question-number">驗證碼</div>
-      <div class="question-text">請輸入購買後收到的驗證碼 (可輸入：0000 快速免費體驗）</div>
+      <div class="question-text">請輸入購買後收到的驗證碼（免費使用，避免過度燒Token防呆哈～）</div>
       <input type="text" id="licenseKey" class="input-field"
              placeholder="例如：XXXX-XXXX-XXXX-XXXX"
              onkeydown="if(event.key==='Enter') verifyKey()">
@@ -83,6 +83,9 @@
     </div>
     <div class="purchase-link">
       還沒有驗證碼？<a href="https://compoundwater.gumroad.com/l/ai_finance" target="_blank">點這裡購買（完全免費或可Free donate）</a>
+    </div>
+    <div style="margin-top:16px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid #1e1e1e;border-radius:8px;">
+      <span style="font-size:12px;color:#555;line-height:1.6;">本站所有數據僅用於當次 AI 運算，AI提供之結果不是財務建議，僅供參考，且本站不儲存任何您的個人財產隱私。</span>
     </div>
   </div>
 
@@ -186,6 +189,11 @@ function renderQuestion() {
       </div>
     </div>
     <div class="nav">
+      <button onclick="prevQuestion()" 
+              style="padding:10px 18px;background:transparent;border:1px solid #2a2a2a;border-radius:8px;color:${currentQ === 0 ? '#333' : '#888'};font-size:13px;cursor:${currentQ === 0 ? 'not-allowed' : 'pointer'};"
+              ${currentQ === 0 ? 'disabled' : ''}>
+        ← 上一題
+      </button>
       <span class="step-indicator">${currentQ + 1} / ${questions.length}</span>
       <button class="btn btn-primary" id="nextBtn"
               onclick="nextQuestion()"
@@ -195,6 +203,13 @@ function renderQuestion() {
       </button>
     </div>
   `;
+}
+
+function prevQuestion() {
+  if (currentQ > 0) {
+    currentQ--;
+    renderQuestion();
+  }
 }
 
 function selectOption(qId, value, el) {
