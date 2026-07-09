@@ -407,11 +407,17 @@ ${summary}
 
 只回傳以下格式的JSON，不要有任何其他文字、解釋或markdown符號：
 
-{"type":"根據分析填入","type_reason":"一句話說明","risk_score":0,"core_advice":"2-3句話建議","allocation":[{"label":"現金/定存","percent":0,"color":"#888780","advice":"具體建議"},{"label":"配息與保值資產","percent":0,"color":"#7F77DD","advice":"具體建議"},{"label":"成長型資產","percent":0,"color":"#378ADD","advice":"具體建議"},{"label":"高風險資產","percent":0,"color":"#E24B4A","advice":"具體建議"}],"key_message":"最關鍵一句話"}
+{"type":"根據分析填入","nickname":"根據分析填入","type_reason":"一句話說明","risk_score":0,"core_advice":"2-3句話建議","allocation":[{"label":"現金/定存","percent":0,"color":"#888780","advice":"具體建議"},{"label":"配息與保值資產","percent":0,"color":"#7F77DD","advice":"具體建議"},{"label":"成長型資產","percent":0,"color":"#378ADD","advice":"具體建議"},{"label":"高風險資產","percent":0,"color":"#E24B4A","advice":"具體建議"}],"key_message":"最關鍵一句話"}
 
 所有percent填入真實數字，加總必須等於100。「配息與保值資產」這一類請合併涵蓋債券、優先股、REITs、黃金等產生穩定收益或保值功能的資產，advice中可視情況分別提及。
 每個 allocation 的 advice 要具體說明放哪個產品、為什麼，以及一句提醒或注意事項，約2-3句話。
-core_advice 要針對用戶的真實痛點和資產現況給出具體建議，至少6-8句話，內容涵蓋：目前狀況的整體評估、最需要優先處理的問題、具體的資金運用方向、可能的風險提醒，以及一個中長期的建議方向。用自然流暢的段落呈現，避免條列。`;
+core_advice 要針對用戶的真實痛點和資產現況給出具體建議，至少6-8句話，內容涵蓋：目前狀況的整體評估、最需要優先處理的問題、具體的資金運用方向、可能的風險提醒，以及一個中長期的建議方向。用自然流暢的段落呈現，避免條列。
+
+nickname 是根據 type 給的一個更有個性、更適合分享到社群的稱號，4-8個字，要有畫面感和記憶點，不要只是重複type。參考風格（僅供參考風格，不要照抄字面）：
+- 防禦型 → 「現金為王的謹慎派」
+- 平衡型 → 「穩健派操盤手」
+- 積極型 → 「梭哈型冒險家」
+請根據用戶的實際答案細節（例如具體的心態、擔憂、資產結構）調整用詞，讓稱號感覺是為這個人量身打造的，不是套版。`;
 
   try {
     const response = await fetch('/api/chat', {
@@ -508,7 +514,10 @@ function showResult(d) {
         <div style="margin-bottom:8px;">
           <span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#e8e8e8;">配置類型</span>
         </div>
-        <div style="font-size:24px;font-weight:500;margin-bottom:4px;color:#e8e8e8;">${escapeHtml(d.type)}</div>
+        <div style="font-size:24px;font-weight:500;margin-bottom:8px;color:#e8e8e8;">${escapeHtml(d.type)}</div>
+        <div style="display:inline-block;background:rgba(245,200,66,0.1);border:1px solid rgba(245,200,66,0.3);border-radius:20px;padding:6px 16px;margin-bottom:10px;">
+          <span style="font-size:15px;font-weight:600;color:#F5C842;">「${escapeHtml(d.nickname)}」</span>
+        </div>
         <div style="font-size:13px;color:#888;line-height:1.5;">${escapeHtml(d.type_reason)}</div>
       </div>
 
@@ -679,8 +688,11 @@ async function generateShareCard() {
     </div>
 
     <div style="margin-bottom:36px; flex-shrink:0;">
-      <div style="font-size:18px;color:${typeColor};letter-spacing:0.05em;margin-bottom:8px;">配置類型</div>
-      <div style="font-size:50px;font-weight:700;color:#f5f5f5;line-height:1.15;">${escapeHtml(d.type)}</div>
+      <div style="font-size:18px;color:${typeColor};letter-spacing:0.05em;margin-bottom:10px;">AI幫我取的稱號是</div>
+      <div style="font-size:56px;font-weight:800;color:#f5f5f5;line-height:1.2;margin-bottom:14px;">「${escapeHtml(d.nickname)}」</div>
+      <div style="display:inline-block;background:rgba(245,200,66,0.12);border:1px solid rgba(245,200,66,0.35);border-radius:20px;padding:6px 18px;">
+        <span style="font-size:20px;font-weight:600;color:#F5C842;">${escapeHtml(d.type)}</span>
+      </div>
     </div>
 
     <div style="display:flex;align-items:center;justify-content:center;gap:32px;height:380px;flex-shrink:0;">
