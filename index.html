@@ -432,8 +432,10 @@ function showResult(d) {
   const typeColors = { '防禦型': '#4CAF7D', '平衡型': '#F5C842', '積極型': '#E24B4A' };
   const typeColor = typeColors[d.type] || '#F5C842';
 
-  const allocationCards = d.allocation.map(item => `
-    <div style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;">
+  const allocationCards = d.allocation.map((item, idx) => `
+    <div id="allocCard_${idx}" class="alloc-card" data-idx="${idx}"
+      style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;cursor:pointer;transition:all 0.25s ease;"
+      onclick="highlightSlice(${idx})">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="width:8px;height:8px;border-radius:50%;background:${item.color};flex-shrink:0;"></div>
@@ -442,20 +444,25 @@ function showResult(d) {
         <span style="font-size:16px;font-weight:500;color:${item.color};">${item.percent}%</span>
       </div>
       <div style="height:4px;background:#1e1e1e;border-radius:2px;overflow:hidden;margin-bottom:6px;">
-        <div style="height:100%;width:${item.percent}%;background:${item.color};border-radius:2px;"></div>
+        <div class="alloc-bar" style="height:100%;width:0%;background:${item.color};border-radius:2px;transition:width 1s cubic-bezier(0.16, 1, 0.3, 1);"></div>
       </div>
       <div style="font-size:12px;color:#666;line-height:1.5;">${item.advice}</div>
     </div>
   `).join('');
 
-  const legendItems = d.allocation.map(item => `
-    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#888;">
+  const legendItems = d.allocation.map((item, idx) => `
+    <div class="legend-item" data-idx="${idx}" onclick="highlightSlice(${idx})"
+      style="display:flex;align-items:center;gap:6px;font-size:12px;color:#888;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background 0.15s;">
       <div style="width:10px;height:10px;border-radius:2px;background:${item.color};flex-shrink:0;"></div>
       <span>${item.label} ${item.percent}%</span>
     </div>
   `).join('');
 
   const chartId = 'donut_' + Date.now();
+  const gaugeId = 'gauge_' + Date.now();
+
+  // 風險儀表板 SVG（半圓形，指針動畫）
+  const gaugeSVG = generateGauge(d.risk_score, typeColor);
 
   document.getElementById('resultArea').innerHTML = `
     <div style="margin-bottom:16px;">
@@ -470,28 +477,24 @@ function showResult(d) {
       </div>
 
       <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
-        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:12px;">風險評分</div>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <span style="font-size:13px;color:#555;">保守</span>
-          <div style="flex:1;height:6px;background:#1e1e1e;border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:${d.risk_score * 10}%;background:linear-gradient(to right,#4CAF7D,#F5C842,#E24B4A);border-radius:3px;"></div>
-          </div>
-          <span style="font-size:13px;color:#555;">積極</span>
-          <span style="font-size:20px;font-weight:500;color:${typeColor};min-width:40px;text-align:right;">${d.risk_score}<span style="font-size:12px;color:#555;">/10</span></span>
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:16px;text-align:center;">風險評分儀表板</div>
+        <div style="display:flex;justify-content:center;">
+          ${gaugeSVG}
         </div>
       </div>
 
       <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
-        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:16px;">建議配置</div>
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:6px;">建議配置</div>
+        <div style="font-size:11px;color:#444;margin-bottom:16px;">點擊圖表或項目可互相對應高亮</div>
         <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px;">
           <div style="position:relative;width:150px;height:150px;flex-shrink:0;">
             <canvas id="${chartId}" role="img" aria-label="資產配置圓餅圖">資產配置比例圖</canvas>
           </div>
-          <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px;" id="legendArea">
             ${legendItems}
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;flex-direction:column;gap:8px;" id="cardsArea">
           ${allocationCards}
         </div>
       </div>
@@ -513,10 +516,15 @@ function showResult(d) {
     <button class="restart-btn" onclick="restart()">← 重新分析</button>
   `;
 
+  // 儲存供 highlightSlice 使用
+  window._allocData = d.allocation;
+  window._chartId = chartId;
+  window._activeSlice = -1;
+
   setTimeout(() => {
     const ctx = document.getElementById(chartId);
     if (ctx && window.Chart) {
-      new Chart(ctx, {
+      window._donutChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
           labels: d.allocation.map(i => i.label),
@@ -524,21 +532,150 @@ function showResult(d) {
             data: d.allocation.map(i => i.percent),
             backgroundColor: d.allocation.map(i => i.color),
             borderWidth: 2,
-            borderColor: '#111'
+            borderColor: '#111',
+            hoverOffset: 12,
+            offset: d.allocation.map(() => 0)
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          animation: {
+            animateRotate: true,
+            animateScale: true,
+            duration: 1200,
+            easing: 'easeOutCubic'
+          },
+          onClick: (evt, elements) => {
+            if (elements.length > 0) {
+              highlightSlice(elements[0].index);
+            }
+          },
+          onHover: (evt, elements) => {
+            evt.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+          },
           plugins: {
             legend: { display: false },
-            tooltip: { callbacks: { label: ctx => ` ${ctx.label}：${ctx.parsed}%` } }
+            tooltip: {
+              backgroundColor: '#1a1a1a',
+              titleColor: '#F5C842',
+              bodyColor: '#e8e8e8',
+              borderColor: '#333',
+              borderWidth: 1,
+              padding: 10,
+              displayColors: true,
+              callbacks: { label: ctx => ` ${ctx.label}：${ctx.parsed}%` }
+            }
           },
-          cutout: '60%'
+          cutout: '58%'
         }
       });
+
+      // 進度條動畫（延遲配合圓餅圖動畫節奏）
+      setTimeout(() => {
+        document.querySelectorAll('.alloc-bar').forEach((bar, idx) => {
+          bar.style.width = d.allocation[idx].percent + '%';
+        });
+      }, 200);
+    }
+
+    // 儀表板指針動畫
+    const gaugeNeedle = document.getElementById('gaugeNeedle');
+    if (gaugeNeedle) {
+      const targetAngle = -90 + (d.risk_score / 10) * 180;
+      gaugeNeedle.style.transition = 'transform 1.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+      setTimeout(() => {
+        gaugeNeedle.setAttribute('transform', `rotate(${targetAngle} 90 90)`);
+      }, 100);
     }
   }, 100);
+}
+
+function highlightSlice(idx) {
+  const isActive = window._activeSlice === idx;
+  window._activeSlice = isActive ? -1 : idx;
+
+  // 更新卡片樣式
+  document.querySelectorAll('.alloc-card').forEach((card, i) => {
+    if (i === idx && !isActive) {
+      card.style.borderColor = window._allocData[i].color;
+      card.style.background = 'rgba(255,255,255,0.03)';
+      card.style.transform = 'scale(1.02)';
+    } else {
+      card.style.borderColor = '#2a2a2a';
+      card.style.background = '#0f0f0f';
+      card.style.transform = 'scale(1)';
+    }
+  });
+
+  // 更新 legend 樣式
+  document.querySelectorAll('.legend-item').forEach((item, i) => {
+    item.style.background = (i === idx && !isActive) ? 'rgba(255,255,255,0.05)' : 'transparent';
+  });
+
+  // 更新圓餅圖 offset（放大選中區塊）
+  if (window._donutChart) {
+    const offsets = window._allocData.map((_, i) => (i === idx && !isActive) ? 16 : 0);
+    window._donutChart.data.datasets[0].offset = offsets;
+    window._donutChart.update();
+  }
+
+  // 卷動到對應卡片
+  if (!isActive) {
+    const card = document.getElementById(`allocCard_${idx}`);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function generateGauge(score, color) {
+  const size = 220;
+  const cx = size / 2;
+  const cy = 110;
+  const r = 85;
+
+  // 半圓弧的漸層色段（綠 -> 黃 -> 紅）
+  const segments = [
+    { start: -180, end: -108, color: '#4CAF7D' },
+    { start: -108, end: -36, color: '#F5C842' },
+    { start: -36, end: 36, color: '#E8A23C' },
+    { start: 36, end: 180, color: '#E24B4A' }
+  ];
+
+  const arcPath = (startAngle, endAngle, radius) => {
+    const x1 = cx + radius * Math.cos((startAngle * Math.PI) / 180);
+    const y1 = cy + radius * Math.sin((startAngle * Math.PI) / 180);
+    const x2 = cx + radius * Math.cos((endAngle * Math.PI) / 180);
+    const y2 = cy + radius * Math.sin((endAngle * Math.PI) / 180);
+    const largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
+    return `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`;
+  };
+
+  const segmentPaths = segments.map(s =>
+    `<path d="${arcPath(s.start, s.end, r)}" stroke="${s.color}" stroke-width="14" fill="none" stroke-linecap="round" opacity="0.85"/>`
+  ).join('');
+
+  // 刻度數字
+  const labels = [0, 2, 4, 6, 8, 10].map(v => {
+    const angle = -180 + (v / 10) * 180;
+    const lx = cx + (r + 24) * Math.cos((angle * Math.PI) / 180);
+    const ly = cy + (r + 24) * Math.sin((angle * Math.PI) / 180);
+    return `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="#555" font-size="10" font-family="sans-serif">${v}</text>`;
+  }).join('');
+
+  return `
+    <svg width="${size}" height="140" viewBox="0 0 ${size} 140">
+      ${segmentPaths}
+      ${labels}
+      <!-- 指針：初始指向最左(0)，由JS動畫轉到目標角度 -->
+      <g id="gaugeNeedle" transform="rotate(-90 ${cx} ${cy})">
+        <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - r + 18}" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="${cx}" cy="${cy}" r="7" fill="${color}"/>
+        <circle cx="${cx}" cy="${cy}" r="3" fill="#0a0a0a"/>
+      </g>
+      <text x="${cx}" y="${cy + 32}" text-anchor="middle" fill="${color}" font-size="28" font-weight="600" font-family="sans-serif">${score}</text>
+      <text x="${cx}" y="${cy + 50}" text-anchor="middle" fill="#555" font-size="11" font-family="sans-serif">/ 10 風險分數</text>
+    </svg>
+  `;
 }
 
 function restart() {
