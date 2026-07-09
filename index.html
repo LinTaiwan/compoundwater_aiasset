@@ -709,6 +709,10 @@ async function exportPDF() {
       format: [pageWidthMM, totalHeightMM]
     });
 
+    // 先把整頁背景塗成跟網頁一致的深色，避免圖片間隙露出白底
+    pdf.setFillColor(10, 10, 10);
+    pdf.rect(0, 0, pageWidthMM, totalHeightMM, 'F');
+
     let cursorY = 10;
 
     if (headerCanvas) {
