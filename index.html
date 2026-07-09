@@ -297,6 +297,9 @@ function renderQuestion() {
         ${currentQ === questions.length - 1 ? '分析我的配置 →' : '下一題 →'}
       </button>
     </div>
+    <div style="margin-top:16px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid #1e1e1e;border-radius:8px;">
+      <span style="font-size:12px;color:#555;line-height:1.6;">本站所有數據僅用於當次 AI 運算，AI提供之結果不是財務建議，僅供參考，且本站不儲存任何您的個人財產隱私。</span>
+    </div>
   `;
 }
 
@@ -467,6 +470,16 @@ function showResult(d) {
   document.getElementById('resultArea').innerHTML = `
     <div style="margin-bottom:16px;">
 
+      <div style="background:rgba(245,200,66,0.06);border:1px solid rgba(245,200,66,0.2);border-radius:12px;padding:20px 24px;margin-bottom:12px;">
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#F5C842;margin-bottom:8px;">✦ 最重要的一件事</div>
+        <div style="font-size:15px;font-weight:500;color:#F5C842;line-height:1.6;">${d.key_message}</div>
+      </div>
+
+      <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:10px;">核心建議</div>
+        <div style="font-size:14px;color:#ccc;line-height:1.8;">${d.core_advice}</div>
+      </div>
+
       <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
           <div style="width:8px;height:8px;border-radius:50%;background:${typeColor};"></div>
@@ -497,16 +510,6 @@ function showResult(d) {
         <div style="display:flex;flex-direction:column;gap:8px;" id="cardsArea">
           ${allocationCards}
         </div>
-      </div>
-
-      <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
-        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:10px;">核心建議</div>
-        <div style="font-size:14px;color:#ccc;line-height:1.8;">${d.core_advice}</div>
-      </div>
-
-      <div style="background:rgba(245,200,66,0.06);border:1px solid rgba(245,200,66,0.2);border-radius:12px;padding:20px 24px;margin-bottom:12px;">
-        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#F5C842;margin-bottom:8px;">✦ 最重要的一件事</div>
-        <div style="font-size:15px;font-weight:500;color:#F5C842;line-height:1.6;">${d.key_message}</div>
       </div>
 
     </div>
