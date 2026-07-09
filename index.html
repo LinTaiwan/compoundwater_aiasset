@@ -761,10 +761,10 @@ function highlightSlice(idx) {
 }
 
 function generateGauge(score, color) {
-  const size = 170;
+  const size = 190;
   const cx = size / 2;
-  const cy = 85;
-  const r = 62;
+  const cy = 78;
+  const r = 58;
 
   // 半圓弧的漸層色段（綠 -> 黃 -> 紅）
   const segments = [
@@ -796,7 +796,7 @@ function generateGauge(score, color) {
   }).join('');
 
   return `
-    <svg width="${size}" height="110" viewBox="0 0 ${size} 110">
+    <svg width="${size}" height="145" viewBox="0 0 ${size} 145">
       ${segmentPaths}
       ${labels}
       <!-- 指針：初始指向最左(0)，由JS動畫轉到目標角度 -->
