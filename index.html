@@ -531,13 +531,22 @@ function showResult(d) {
     </div>
 ${renderFooterNotice()}
 
-    <button id="exportPdfBtn" onclick="exportPDF()"
-      style="width:100%;margin-top:16px;padding:16px 24px;background:linear-gradient(135deg, #F5C842 0%, #f0a830 100%);color:#0a0a0a;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s ease;box-shadow:0 4px 16px rgba(245,200,66,0.25);"
-      onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(245,200,66,0.35)'"
-      onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 16px rgba(245,200,66,0.25)'">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      <span id="exportPdfBtnText">匯出專屬 PDF 報告</span>
-    </button>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button id="shareCardBtn" onclick="generateShareCard()"
+        style="flex:1;padding:16px 16px;background:#1a1a1a;color:#e8e8e8;border:1px solid #333;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s ease;"
+        onmouseover="this.style.borderColor='#F5C842';this.style.color='#F5C842'"
+        onmouseout="this.style.borderColor='#333';this.style.color='#e8e8e8'">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        <span id="shareCardBtnText">產生分享圖</span>
+      </button>
+      <button id="exportPdfBtn" onclick="exportPDF()"
+        style="flex:1;padding:16px 16px;background:linear-gradient(135deg, #F5C842 0%, #f0a830 100%);color:#0a0a0a;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s ease;box-shadow:0 4px 16px rgba(245,200,66,0.25);"
+        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(245,200,66,0.35)'"
+        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 16px rgba(245,200,66,0.25)'">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span id="exportPdfBtnText">匯出PDF報告</span>
+      </button>
+    </div>
 
     <div style="margin-top:24px;padding-top:20px;border-top:1px solid #1e1e1e;">
       <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:12px;text-align:center;">🔓 想解鎖更多功能？</div>
@@ -560,6 +569,7 @@ ${renderFooterNotice()}
   `;
 
   // 儲存供 highlightSlice 使用
+  window._lastResult = d;
   window._allocData = d.allocation;
   window._chartId = chartId;
   window._activeSlice = -1;
@@ -622,6 +632,144 @@ ${renderFooterNotice()}
       }, 200);
     }
   }, 100);
+}
+
+async function generateShareCard() {
+  const btn = document.getElementById('shareCardBtn');
+  const btnText = document.getElementById('shareCardBtnText');
+  const d = window._lastResult;
+
+  if (!d || !window.html2canvas) {
+    alert('請先完成分析，或稍後再試一次');
+    return;
+  }
+
+  const originalText = btnText.textContent;
+  btnText.textContent = '產生中...';
+  btn.style.opacity = '0.7';
+  btn.style.pointerEvents = 'none';
+
+  const typeColors = { '防禦型': '#4CAF7D', '平衡型': '#F5C842', '積極型': '#E24B4A' };
+  const typeColor = typeColors[d.type] || '#F5C842';
+
+  // 在畫面外建立一張 1080x1080 的分享卡片 DOM，渲染完成後截圖，最後移除
+  const cardWrap = document.createElement('div');
+  cardWrap.style.cssText = 'position:fixed; left:-9999px; top:0; width:1080px; height:1080px; background:#0a0a0a; padding:80px 72px; box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; display:flex; flex-direction:column;';
+
+  const donutCanvasId = 'shareDonut_' + Date.now();
+
+  cardWrap.innerHTML = `
+    <div style="display:flex; align-items:center; gap:14px; margin-bottom:56px;">
+      <img src="${document.querySelector('link[rel="apple-touch-icon"]').href}" style="width:56px;height:56px;border-radius:50%;">
+      <div>
+        <div style="font-size:22px;letter-spacing:0.1em;color:#F5C842;font-weight:600;text-transform:uppercase;">CompoundWater × AI</div>
+        <div style="font-size:16px;color:#666;margin-top:4px;">資產配置分析</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:40px;">
+      <div style="font-size:20px;color:${typeColor};letter-spacing:0.05em;margin-bottom:10px;">配置類型</div>
+      <div style="font-size:56px;font-weight:700;color:#f5f5f5;line-height:1.2;">${escapeHtml(d.type)}</div>
+    </div>
+
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;position:relative;">
+      <canvas id="${donutCanvasId}" width="620" height="620" style="width:440px;height:440px;"></canvas>
+    </div>
+
+    <div style="background:rgba(245,200,66,0.08); border:2px solid rgba(245,200,66,0.3); border-radius:24px; padding:36px 40px; margin-top:40px;">
+      <div style="font-size:20px;color:#F5C842;margin-bottom:12px;">✦ 最重要的一件事</div>
+      <div style="font-size:30px;color:#F5C842;font-weight:600;line-height:1.5;">${escapeHtml(d.key_message)}</div>
+    </div>
+
+    <div style="text-align:center;margin-top:44px;font-size:18px;color:#444;letter-spacing:0.05em;">
+      compoundwater.vercel.app 　|　 想知道你的配置嗎？
+    </div>
+  `;
+
+  document.body.appendChild(cardWrap);
+
+  // 等一個 tick 讓 DOM 完全掛載後再畫圖表
+  await new Promise(resolve => setTimeout(resolve, 50));
+
+  const canvasEl = document.getElementById(donutCanvasId);
+  new Chart(canvasEl, {
+    type: 'doughnut',
+    data: {
+      labels: d.allocation.map(i => i.label),
+      datasets: [{
+        data: d.allocation.map(i => i.percent),
+        backgroundColor: d.allocation.map(i => i.color),
+        borderWidth: 4,
+        borderColor: '#0a0a0a'
+      }]
+    },
+    options: {
+      responsive: false,
+      animation: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      cutout: '58%'
+    }
+  });
+
+  // 等圖表畫完再截圖
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  try {
+    const canvas = await html2canvas(cardWrap, {
+      backgroundColor: '#0a0a0a',
+      scale: 1,
+      useCORS: true,
+      logging: false,
+      width: 1080,
+      height: 1080
+    });
+
+    document.body.removeChild(cardWrap);
+
+    canvas.toBlob(async (blob) => {
+      const dateStr = new Date().toLocaleDateString('zh-TW').replace(/\//g, '');
+      const fileName = `CompoundWater_分享卡_${dateStr}.png`;
+
+      // 手機上優先用原生分享面板，讓使用者直接分享到IG/Threads限動
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], fileName, { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: 'CompoundWater 資產配置分析',
+              text: '看看我的AI資產配置分析結果'
+            });
+            btnText.textContent = '✓ 已分享';
+            setTimeout(() => { btnText.textContent = originalText; }, 2000);
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+            return;
+          } catch (shareErr) {
+            // 使用者取消分享，不當作錯誤處理，改走下載
+          }
+        }
+      }
+
+      // 桌機或不支援分享API時，直接下載
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+      btnText.textContent = '✓ 已下載';
+      setTimeout(() => { btnText.textContent = originalText; }, 2000);
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = 'auto';
+    }, 'image/png');
+
+  } catch (err) {
+    console.error('Share card error:', err);
+    if (document.body.contains(cardWrap)) document.body.removeChild(cardWrap);
+    btnText.textContent = '產生失敗，請再試一次';
+    setTimeout(() => { btnText.textContent = originalText; }, 2000);
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+  }
 }
 
 async function exportPDF() {
