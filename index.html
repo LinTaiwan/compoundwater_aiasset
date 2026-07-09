@@ -481,18 +481,18 @@ function showResult(d) {
       </div>
 
       <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <div style="width:8px;height:8px;border-radius:50%;background:${typeColor};"></div>
-          <span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:${typeColor};">配置類型</span>
-        </div>
-        <div style="font-size:24px;font-weight:500;margin-bottom:4px;color:#e8e8e8;">${d.type}</div>
-        <div style="font-size:13px;color:#888;">${d.type_reason}</div>
-      </div>
-
-      <div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
-        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:16px;text-align:center;">風險評分儀表板</div>
-        <div style="display:flex;justify-content:center;">
-          ${gaugeSVG}
+        <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+          <div style="flex:1;min-width:140px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:${typeColor};"></div>
+              <span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:${typeColor};">配置類型</span>
+            </div>
+            <div style="font-size:24px;font-weight:500;margin-bottom:4px;color:#e8e8e8;">${d.type}</div>
+            <div style="font-size:13px;color:#888;line-height:1.5;">${d.type_reason}</div>
+          </div>
+          <div style="flex-shrink:0;">
+            ${gaugeSVG}
+          </div>
         </div>
       </div>
 
@@ -631,10 +631,10 @@ function highlightSlice(idx) {
 }
 
 function generateGauge(score, color) {
-  const size = 220;
+  const size = 170;
   const cx = size / 2;
-  const cy = 110;
-  const r = 85;
+  const cy = 85;
+  const r = 62;
 
   // 半圓弧的漸層色段（綠 -> 黃 -> 紅）
   const segments = [
@@ -666,7 +666,7 @@ function generateGauge(score, color) {
   }).join('');
 
   return `
-    <svg width="${size}" height="140" viewBox="0 0 ${size} 140">
+    <svg width="${size}" height="110" viewBox="0 0 ${size} 110">
       ${segmentPaths}
       ${labels}
       <!-- 指針：初始指向最左(0)，由JS動畫轉到目標角度 -->
