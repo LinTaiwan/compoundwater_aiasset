@@ -115,7 +115,17 @@ const questions = [
   { id: 'loss_impact', type: 'single', text: '這筆錢如果虧掉一半，你的生活會受到影響嗎？', options: ['會，影響很大', '有影響但還能撐', '不會，這是閒錢'] },
   { id: 'free_cash', type: 'single', text: '你有多少資金是「即使歸零也不影響生活」的？', options: ['幾乎沒有', '10-20%', '30-50%', '50%以上'] },
   // 區塊三：目標與心態
-  { id: 'goal', type: 'single', section: '🎯 區塊三：目標與心態', text: '這筆錢的主要任務是什麼？', options: ['保本，不要虧', '穩定產生現金流', '長期增值', '短期翻倍'] },
+  { id: 'allocation_breakdown', type: 'allocation', section: '🎯 區塊三：目標與心態', text: '你目前的資產大概怎麼分配？（可估算，不用精確）',
+    fields: [
+      { id: 'alloc_cash', label: '流動資金', sublabel: '現金／定存等', color: '#888780' },
+      { id: 'alloc_stock', label: '投資股票', sublabel: '台股／美股', color: '#378ADD' },
+      { id: 'alloc_crypto', label: '投資加密貨幣', sublabel: 'BTC／ETH 等', color: '#F5C842' },
+      { id: 'alloc_property', label: '固定資產', sublabel: '房產／車等', color: '#4CAF7D' },
+      { id: 'alloc_debt', label: '負債', sublabel: '房貸／車貸等', color: '#E24B4A' }
+    ],
+    optional: true
+  },
+  { id: 'goal', type: 'single', text: '這筆錢的主要任務是什麼？', options: ['保本，不要虧', '穩定產生現金流', '長期增值', '短期翻倍'] },
   { id: 'mindset', type: 'single', text: '你現在的心理狀態比較接近哪個？', options: ['保守，剛經歷過虧損', '中性，想穩步前進', '積極，想把握機會'] },
   { id: 'concern', type: 'single', text: '你最大的擔憂是什麼？', options: ['錢不夠用', '通膨讓錢縮水', '投資虧損', '不知道怎麼開始'] },
   // 區塊四：痛點與目標
@@ -208,6 +218,37 @@ function renderQuestion() {
         onfocus="this.style.borderColor='#F5C842'"
         onblur="this.style.borderColor='#2a2a2a'">${answers[q.id] || ''}</textarea>
     `;
+  } else if (q.type === 'allocation') {
+    const currentAlloc = answers[q.id] || {};
+    const total = q.fields.reduce((sum, f) => sum + (parseFloat(currentAlloc[f.id]) || 0), 0);
+    const totalColor = Math.abs(total - 100) < 0.1 ? '#4CAF7D' : total > 100 ? '#E24B4A' : '#888';
+    inputHtml = `
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+        ${q.fields.map(f => `
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:${f.color};flex-shrink:0;"></div>
+            <div style="flex:1;">
+              <div style="font-size:13px;color:#e8e8e8;">${f.label}</div>
+              <div style="font-size:11px;color:#555;">${f.sublabel}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input type="number" min="0" max="100"
+                placeholder="0"
+                value="${currentAlloc[f.id] || ''}"
+                oninput="updateAlloc('${q.id}', '${f.id}', this.value)"
+                style="width:70px;padding:8px 10px;background:#0f0f0f;border:1px solid #2a2a2a;border-radius:6px;color:#e8e8e8;font-size:15px;text-align:center;outline:none;"
+                onfocus="this.style.borderColor='#F5C842'"
+                onblur="this.style.borderColor='#2a2a2a'">
+              <span style="font-size:13px;color:#555;">%</span>
+            </div>
+          </div>
+        `).join('')}
+        <div style="border-top:1px solid #1e1e1e;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;color:#555;">合計（資產部分建議填到100%）</span>
+          <span id="allocTotal" style="font-size:16px;font-weight:500;color:${totalColor};">${total.toFixed(0)}%</span>
+        </div>
+      </div>
+    `;
   } else {
     inputHtml = `
       <div class="options">
@@ -259,6 +300,23 @@ function selectNumber(qId, value) {
   }
 }
 
+function updateAlloc(qId, fieldId, value) {
+  if (!answers[qId]) answers[qId] = {};
+  if (value === '' || value === null) {
+    delete answers[qId][fieldId];
+  } else {
+    answers[qId][fieldId] = parseFloat(value) || 0;
+  }
+  // 更新合計顯示
+  const q = questions.find(q => q.id === qId);
+  const total = q.fields.reduce((sum, f) => sum + (parseFloat(answers[qId][f.id]) || 0), 0);
+  const totalEl = document.getElementById('allocTotal');
+  if (totalEl) {
+    totalEl.textContent = total.toFixed(0) + '%';
+    totalEl.style.color = Math.abs(total - 100) < 0.1 ? '#4CAF7D' : total > 100 ? '#E24B4A' : '#888';
+  }
+}
+
 function selectText(qId, value) {
   answers[qId] = value;
   // textarea 是選填，不影響下一題按鈕
@@ -294,7 +352,13 @@ async function analyzeWithAI() {
 
   const summary = questions
     .filter(q => answers[q.id] !== undefined && answers[q.id] !== '')
-    .map(q => `${q.text}: ${answers[q.id]}`)
+    .map(q => {
+      if (q.type === 'allocation' && typeof answers[q.id] === 'object') {
+        const fields = q.fields.map(f => `${f.label}${answers[q.id][f.id] ? answers[q.id][f.id] + '%' : '未填'}`).join('、');
+        return `${q.text}: ${fields}`;
+      }
+      return `${q.text}: ${answers[q.id]}`;
+    })
     .join('\n');
 
   const prompt = `你是一位專業的資產配置顧問，有6年真實交易經驗，曾經歷兩次千萬獲利和兩次重大虧損，深刻理解風險管理的重要性。
