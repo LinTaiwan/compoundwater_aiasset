@@ -67,8 +67,8 @@
     <div class="progress-fill" id="progressFill" style="width: 0%"></div>
   </div>
 
-  <!-- 驗證碼畫面 -->
-  <div id="accessScreen">
+  <!-- 驗證碼畫面：保留但預設隱藏，未來可能用於解鎖更多功能，目前先移到結果頁下方 -->
+  <div id="accessScreen" class="hidden">
     <div class="question-card">
       <div class="question-number">驗證碼</div>
       <div class="question-text">請輸入購買後收到的驗證碼（免費使用，避免過度燒Token防呆哈～）</div>
@@ -84,13 +84,10 @@
     <div class="purchase-link">
       還沒有驗證碼？<a href="https://compoundwater.gumroad.com/l/ai_finance" target="_blank">點這裡購買（完全免費或可Free donate）</a>
     </div>
-    <div style="margin-top:16px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid #1e1e1e;border-radius:8px;">
-      <span style="font-size:12px;color:#555;line-height:1.6;">本站所有數據僅用於當次 AI 運算，AI提供之結果不是財務建議，僅供參考，且本站不儲存任何您的個人財產隱私。</span>
-    </div>
   </div>
 
-  <!-- 問卷主體 -->
-  <div id="mainApp" class="hidden">
+  <!-- 問卷主體：現在直接顯示，不再擋驗證 -->
+  <div id="mainApp">
     <div id="questionArea"></div>
     <div id="loadingArea" class="hidden">
       <div class="loading">
@@ -160,10 +157,11 @@ async function verifyKey() {
 
     if (data.valid) {
       sessionStorage.setItem('verified', 'true');
-      document.getElementById('accessScreen').classList.add('hidden');
-      document.getElementById('mainApp').classList.remove('hidden');
-      renderQuestion();
+      btn.textContent = '✓ 已解鎖';
+      errorEl.style.color = '#4CAF7D';
+      errorEl.textContent = '驗證成功！感謝支持 🙏';
     } else {
+      errorEl.style.color = '#E24B4A';
       errorEl.textContent = data.message;
       btn.textContent = '驗證 →';
       btn.disabled = false;
@@ -175,13 +173,9 @@ async function verifyKey() {
   }
 }
 
-// 頁面載入時檢查 session
+// 頁面載入直接開始問卷（驗證碼功能保留但暫不強制）
 window.onload = function() {
-  if (sessionStorage.getItem('verified')) {
-    document.getElementById('accessScreen').classList.add('hidden');
-    document.getElementById('mainApp').classList.remove('hidden');
-    renderQuestion();
-  }
+  renderQuestion();
 };
 
 // 問卷邏輯
@@ -516,6 +510,24 @@ function showResult(d) {
     <div style="margin-top:16px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid #1e1e1e;border-radius:8px;">
       <span style="font-size:12px;color:#555;line-height:1.6;">本站所有數據僅用於當次 AI 運算，AI提供之結果不是財務建議，僅供參考，且本站不儲存任何您的個人財產隱私。</span>
     </div>
+
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid #1e1e1e;">
+      <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:12px;text-align:center;">🔓 想解鎖更多功能？</div>
+      <div class="question-card" style="margin-bottom:12px;">
+        <input type="text" id="licenseKey" class="input-field"
+               placeholder="驗證碼（例如：XXXX-XXXX-XXXX-XXXX）"
+               onkeydown="if(event.key==='Enter') verifyKey()">
+        <div class="error-text" id="keyError"></div>
+        <button class="btn btn-primary" id="verifyBtn"
+                onclick="verifyKey()" style="margin-top: 12px;">
+          驗證 →
+        </button>
+      </div>
+      <div class="purchase-link">
+        還沒有驗證碼？<a href="https://compoundwater.gumroad.com/l/ai_finance" target="_blank">點這裡購買（完全免費或可Free donate）</a>
+      </div>
+    </div>
+
     <button class="restart-btn" onclick="restart()">← 重新分析</button>
   `;
 
