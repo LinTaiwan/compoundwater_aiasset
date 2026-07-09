@@ -492,11 +492,6 @@ function showResult(d) {
   document.getElementById('resultArea').innerHTML = `
     <div id="pdfReportArea" style="margin-bottom:16px;background:#0a0a0a;padding:4px;">
 
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:0 4px;">
-        <span style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#F5C842;font-weight:500;">CompoundWater × AI</span>
-        <span style="font-size:11px;color:#444;">— 資產配置分析報告</span>
-      </div>
-
       <div style="background:rgba(245,200,66,0.06);border:1px solid rgba(245,200,66,0.2);border-radius:12px;padding:20px 24px;margin-bottom:12px;">
         <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#F5C842;margin-bottom:8px;">✦ 最重要的一件事</div>
         <div style="font-size:15px;font-weight:500;color:#F5C842;line-height:1.6;">${d.key_message}</div>
@@ -664,6 +659,7 @@ function showResult(d) {
 async function exportPDF() {
   const btn = document.getElementById('exportPdfBtn');
   const btnText = document.getElementById('exportPdfBtnText');
+  const headerEl = document.querySelector('.header');
   const target = document.getElementById('pdfReportArea');
 
   if (!target || !window.html2canvas || !window.jspdf) {
@@ -677,30 +673,55 @@ async function exportPDF() {
   btn.style.pointerEvents = 'none';
 
   try {
-    // 截圖前暫時移除卡片的 hover transform，避免截圖歪斜
-    const canvas = await html2canvas(target, {
+    // 分別截取「頁首（logo+標題）」與「報告內容」，再合併進同一張PDF
+    const headerCanvas = headerEl ? await html2canvas(headerEl, {
+      backgroundColor: '#0a0a0a',
+      scale: 2,
+      useCORS: true,
+      logging: false
+    }) : null;
+
+    const bodyCanvas = await html2canvas(target, {
       backgroundColor: '#0a0a0a',
       scale: 2,
       useCORS: true,
       logging: false
     });
 
-    const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
-
-    // 依截圖比例計算 PDF 頁面尺寸（寬度固定為A4寬，高度依比例延伸，避免內容被裁切）
     const pageWidthMM = 210;
-    const imgWidthPx = canvas.width;
-    const imgHeightPx = canvas.height;
-    const imgHeightMM = (imgHeightPx * pageWidthMM) / imgWidthPx;
+
+    const bodyWidthMM = pageWidthMM;
+    const bodyHeightMM = (bodyCanvas.height * bodyWidthMM) / bodyCanvas.width;
+
+    let headerHeightMM = 0;
+    if (headerCanvas) {
+      headerHeightMM = (headerCanvas.height * pageWidthMM) / headerCanvas.width;
+    }
+
+    // 頁首與內容間留一點間距，並在頁首下方模擬黃色底線
+    const headerGap = headerCanvas ? 6 : 0;
+    const totalHeightMM = 10 + headerHeightMM + headerGap + bodyHeightMM + 10;
 
     const pdf = new jsPDF({
       orientation: 'p',
       unit: 'mm',
-      format: [pageWidthMM, imgHeightMM + 20]
+      format: [pageWidthMM, totalHeightMM]
     });
 
-    pdf.addImage(imgData, 'PNG', 0, 10, pageWidthMM, imgHeightMM);
+    let cursorY = 10;
+
+    if (headerCanvas) {
+      pdf.addImage(headerCanvas.toDataURL('image/png'), 'PNG', 0, cursorY, pageWidthMM, headerHeightMM);
+      cursorY += headerHeightMM;
+      // 黃色底線，呼應網頁上 logo 下方的進度條
+      pdf.setDrawColor(245, 200, 66);
+      pdf.setFillColor(245, 200, 66);
+      pdf.rect(0, cursorY + 2, pageWidthMM, 1, 'F');
+      cursorY += 2 + headerGap;
+    }
+
+    pdf.addImage(bodyCanvas.toDataURL('image/png'), 'PNG', 0, cursorY, bodyWidthMM, bodyHeightMM);
 
     const dateStr = new Date().toLocaleDateString('zh-TW').replace(/\//g, '');
     pdf.save(`CompoundWater_資產配置報告_${dateStr}.pdf`);
