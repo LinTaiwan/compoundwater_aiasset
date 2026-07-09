@@ -5,41 +5,49 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { prompt } = req.body;
+  const { license_key } = req.body;
+
+  if (!license_key || license_key.trim() === '') {
+    return res.status(400).json({ valid: false, message: '請輸入驗證碼' });
+  }
+
+  // 管理員bypass（從環境變數讀取，不寫死在程式碼裡）
+  const adminKey = process.env.ADMIN_KEY;
+  if (adminKey && license_key.trim() === adminKey) {
+    return res.status(200).json({ valid: true });
+  }
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const params = new URLSearchParams();
+    params.append('product_id', process.env.GUMROAD_PRODUCT_ID);
+    params.append('license_key', license_key.trim());
+    params.append('increment_uses_count', 'true');
 
-    if (!apiKey) {
-      return res.status(500).json({ result: '錯誤：API Key 未設定' });
-    }
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 4000 }
-        })
-      }
-    );
+    const response = await fetch('https://api.gumroad.com/v2/licenses/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
 
     const data = await response.json();
+    console.log('Gumroad response:', JSON.stringify(data));
 
-    if (data.error) {
-      return res.status(500).json({ result: `Gemini錯誤：${data.error.message}` });
+    if (data.success) {
+      if (data.purchase && data.purchase.refunded) {
+        return res.status(400).json({ valid: false, message: '此訂單已退款' });
+      }
+      if (data.uses > 1) {
+        return res.status(400).json({ valid: false, message: '此驗證碼已使用過' });
+      }
+      res.status(200).json({ valid: true });
+    } else {
+      res.status(400).json({ 
+        valid: false, 
+        message: data.message || '驗證碼無效，請確認輸入正確' 
+      });
     }
-
-    const result = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!result) {
-      return res.status(500).json({ result: '分析結果為空，請稍後再試' });
-    }
-
-    res.status(200).json({ result });
   } catch (err) {
-    res.status(500).json({ result: `錯誤：${err.message}` });
+    console.error('Verify error:', err);
+    res.status(500).json({ valid: false, message: '驗證服務暫時無法使用，請稍後再試' });
   }
 }
