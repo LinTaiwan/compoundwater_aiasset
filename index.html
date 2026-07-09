@@ -652,43 +652,58 @@ async function generateShareCard() {
   const typeColors = { '防禦型': '#4CAF7D', '平衡型': '#F5C842', '積極型': '#E24B4A' };
   const typeColor = typeColors[d.type] || '#F5C842';
 
-  // 在畫面外建立一張 1080x1080 的分享卡片 DOM，渲染完成後截圖，最後移除
+  // 卡片尺寸：1080x1080，內距64px，每個區塊高度都精算過，加總留有餘裕，避免html2canvas裁切時把底部文字切掉
+  const CARD_SIZE = 1080;
+  const PAD = 64;
+
   const cardWrap = document.createElement('div');
-  cardWrap.style.cssText = 'position:fixed; left:-9999px; top:0; width:1080px; height:1080px; background:#0a0a0a; padding:80px 72px; box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; display:flex; flex-direction:column;';
+  cardWrap.style.cssText = `position:fixed; left:-9999px; top:0; width:${CARD_SIZE}px; height:${CARD_SIZE}px; background:#0a0a0a; padding:${PAD}px; box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; display:flex; flex-direction:column; overflow:hidden;`;
 
   const donutCanvasId = 'shareDonut_' + Date.now();
 
+  const legendItems = d.allocation.map(item => `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div style="width:16px;height:16px;border-radius:4px;background:${item.color};flex-shrink:0;"></div>
+      <span style="font-size:24px;color:#ccc;flex:1;">${escapeHtml(item.label)}</span>
+      <span style="font-size:24px;font-weight:600;color:#f0f0f0;">${item.percent}%</span>
+    </div>
+  `).join('');
+
   cardWrap.innerHTML = `
-    <div style="display:flex; align-items:center; gap:14px; margin-bottom:56px;">
-      <img src="${document.querySelector('link[rel="apple-touch-icon"]').href}" style="width:56px;height:56px;border-radius:50%;">
+    <div style="display:flex; align-items:center; gap:14px; margin-bottom:36px; flex-shrink:0;">
+      <img src="${document.querySelector('link[rel="apple-touch-icon"]').href}" style="width:52px;height:52px;border-radius:50%;">
       <div>
-        <div style="font-size:22px;letter-spacing:0.1em;color:#F5C842;font-weight:600;text-transform:uppercase;">CompoundWater × AI</div>
-        <div style="font-size:16px;color:#666;margin-top:4px;">資產配置分析</div>
+        <div style="font-size:20px;letter-spacing:0.1em;color:#F5C842;font-weight:600;text-transform:uppercase;">CompoundWater × AI</div>
+        <div style="font-size:15px;color:#666;margin-top:3px;">資產配置分析</div>
       </div>
     </div>
 
-    <div style="margin-bottom:40px;">
-      <div style="font-size:20px;color:${typeColor};letter-spacing:0.05em;margin-bottom:10px;">配置類型</div>
-      <div style="font-size:56px;font-weight:700;color:#f5f5f5;line-height:1.2;">${escapeHtml(d.type)}</div>
+    <div style="margin-bottom:36px; flex-shrink:0;">
+      <div style="font-size:18px;color:${typeColor};letter-spacing:0.05em;margin-bottom:8px;">配置類型</div>
+      <div style="font-size:64px;font-weight:700;color:#f5f5f5;line-height:1.15;">${escapeHtml(d.type)}</div>
     </div>
 
-    <div style="flex:1;display:flex;align-items:center;justify-content:center;position:relative;">
-      <canvas id="${donutCanvasId}" width="620" height="620" style="width:440px;height:440px;"></canvas>
+    <div style="display:flex;align-items:center;gap:40px;height:380px;flex-shrink:0;">
+      <div style="flex-shrink:0;">
+        <canvas id="${donutCanvasId}" width="640" height="640" style="width:320px;height:320px;"></canvas>
+      </div>
+      <div style="flex:1;min-width:0;">
+        ${legendItems}
+      </div>
     </div>
 
-    <div style="background:rgba(245,200,66,0.08); border:2px solid rgba(245,200,66,0.3); border-radius:24px; padding:36px 40px; margin-top:40px;">
-      <div style="font-size:20px;color:#F5C842;margin-bottom:12px;">✦ 最重要的一件事</div>
-      <div style="font-size:30px;color:#F5C842;font-weight:600;line-height:1.5;">${escapeHtml(d.key_message)}</div>
+    <div style="background:rgba(245,200,66,0.08); border:2px solid rgba(245,200,66,0.3); border-radius:24px; padding:28px 32px; margin-top:32px; flex-shrink:0;">
+      <div style="font-size:18px;color:#F5C842;margin-bottom:10px;">✦ 最重要的一件事</div>
+      <div style="font-size:26px;color:#F5C842;font-weight:600;line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${escapeHtml(d.key_message)}</div>
     </div>
 
-    <div style="text-align:center;margin-top:44px;font-size:18px;color:#444;letter-spacing:0.05em;">
-      compoundwater.vercel.app 　|　 想知道你的配置嗎？
+    <div style="text-align:center;margin-top:32px;font-size:26px;color:#ffffff;font-weight:700;letter-spacing:0.03em;flex-shrink:0;">
+      compoundwater.vercel.app
     </div>
   `;
 
   document.body.appendChild(cardWrap);
 
-  // 等一個 tick 讓 DOM 完全掛載後再畫圖表
   await new Promise(resolve => setTimeout(resolve, 50));
 
   const canvasEl = document.getElementById(donutCanvasId);
@@ -711,17 +726,15 @@ async function generateShareCard() {
     }
   });
 
-  // 等圖表畫完再截圖
   await new Promise(resolve => setTimeout(resolve, 300));
 
   try {
+    // 不寫死 width/height 給 html2canvas，讓它照實際 DOM 尺寸（已精算過剛好等於CARD_SIZE）截圖，避免內容溢出時被強制裁切
     const canvas = await html2canvas(cardWrap, {
       backgroundColor: '#0a0a0a',
       scale: 1,
       useCORS: true,
-      logging: false,
-      width: 1080,
-      height: 1080
+      logging: false
     });
 
     document.body.removeChild(cardWrap);
@@ -730,7 +743,6 @@ async function generateShareCard() {
       const dateStr = new Date().toLocaleDateString('zh-TW').replace(/\//g, '');
       const fileName = `CompoundWater_分享卡_${dateStr}.png`;
 
-      // 手機上優先用原生分享面板，讓使用者直接分享到IG/Threads限動
       if (navigator.share && navigator.canShare) {
         const file = new File([blob], fileName, { type: 'image/png' });
         if (navigator.canShare({ files: [file] })) {
@@ -746,12 +758,11 @@ async function generateShareCard() {
             btn.style.pointerEvents = 'auto';
             return;
           } catch (shareErr) {
-            // 使用者取消分享，不當作錯誤處理，改走下載
+            // 使用者取消分享，改走下載
           }
         }
       }
 
-      // 桌機或不支援分享API時，直接下載
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = fileName;
