@@ -24,6 +24,7 @@ export default async function handler(req, res) {
           type: 'OBJECT',
           properties: {
             type: { type: 'STRING' },
+            nickname: { type: 'STRING' },
             type_reason: { type: 'STRING' },
             risk_score: { type: 'NUMBER' },
             core_advice: { type: 'STRING' },
@@ -42,7 +43,7 @@ export default async function handler(req, res) {
             },
             key_message: { type: 'STRING' }
           },
-          required: ['type', 'type_reason', 'risk_score', 'core_advice', 'allocation', 'key_message']
+          required: ['type', 'nickname', 'type_reason', 'risk_score', 'core_advice', 'allocation', 'key_message']
         }
       }
     };
