@@ -59,6 +59,58 @@
   .bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
   .restart-btn { margin-top: 16px; padding: 10px 20px; background: transparent; border: 1px solid #2a2a2a; border-radius: 8px; color: #888; font-size: 13px; cursor: pointer; transition: all 0.15s; }
   .restart-btn:hover { border-color: #555; color: #ccc; }
+
+  /* iOS PWA 加入主畫面 提示卡片 */
+  #pwaHintCard {
+    position: fixed;
+    left: 16px; right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    max-width: 400px;
+    margin: 0 auto;
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 14px;
+    padding: 14px 14px 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+    z-index: 9999;
+    transform: translateY(120%);
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease;
+  }
+  #pwaHintCard.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  #pwaHintCard .pwa-icon-wrap {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: rgba(233,255,46,0.1);
+    border: 1px solid rgba(233,255,46,0.25);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  #pwaHintCard .pwa-text {
+    flex: 1;
+    font-size: 13px;
+    color: #e8e8e8;
+    line-height: 1.4;
+  }
+  #pwaHintCard .pwa-close {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: #555;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.15s, background 0.15s;
+  }
+  #pwaHintCard .pwa-close:hover { color: #ccc; background: rgba(255,255,255,0.06); }
 </style>
 </head>
 <body>
@@ -197,9 +249,87 @@ async function verifyKey() {
   }
 }
 
+// ===== iOS PWA「加入主畫面」提示卡片 =====
+
+const PWA_HINT_DISMISS_KEY = 'pwaHintDismissedAt';
+const PWA_HINT_DISMISS_DAYS = 14;
+let _pwaHintShownThisSession = false;
+
+// 條件1+2：是否為 iOS 裝置且使用 Safari（排除 iOS 上的 Chrome/Firefox/Edge/Opera）
+function isIOSSafari() {
+  const ua = navigator.userAgent;
+  const isIOSDevice = /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS 偽裝成 Mac 但有觸控點
+  if (!isIOSDevice) return false;
+
+  const isOtherIOSBrowser = /CriOS|FxiOS|EdgiOS|OPiOS|Mercury|GSA/i.test(ua);
+  const isSafari = /Safari/i.test(ua) && !isOtherIOSBrowser;
+  return isSafari;
+}
+
+// 條件3：是否已經是從主畫面開啟（standalone模式）
+function isAlreadyInstalled() {
+  return window.navigator.standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches;
+}
+
+// 條件4：是否在14天內關閉過提示
+function wasRecentlyDismissed() {
+  const dismissedAt = localStorage.getItem(PWA_HINT_DISMISS_KEY);
+  if (!dismissedAt) return false;
+  const daysPassed = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60 * 24);
+  return daysPassed < PWA_HINT_DISMISS_DAYS;
+}
+
+function checkAndShowPWAHint() {
+  if (_pwaHintShownThisSession) return;
+  if (document.getElementById('pwaHintCard')) return;
+  if (!isIOSSafari()) return;
+  if (isAlreadyInstalled()) return;
+  if (wasRecentlyDismissed()) return;
+
+  showPWAHintCard();
+}
+
+function showPWAHintCard() {
+  _pwaHintShownThisSession = true;
+
+  const card = document.createElement('div');
+  card.id = 'pwaHintCard';
+  card.innerHTML = `
+    <div class="pwa-icon-wrap">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E9FF2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3v12"/>
+        <path d="M8 7l4-4 4 4"/>
+        <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>
+      </svg>
+    </div>
+    <div class="pwa-text">加入主畫面，像 App 一樣使用</div>
+    <button class="pwa-close" onclick="dismissPWAHint()" aria-label="關閉">✕</button>
+  `;
+  document.body.appendChild(card);
+
+  // 下一個 frame 再加 show class，觸發滑入動畫
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => card.classList.add('show'));
+  });
+}
+
+function dismissPWAHint() {
+  const card = document.getElementById('pwaHintCard');
+  if (card) {
+    card.classList.remove('show');
+    setTimeout(() => card.remove(), 400);
+  }
+  localStorage.setItem(PWA_HINT_DISMISS_KEY, Date.now().toString());
+}
+
 // 頁面載入直接開始問卷（驗證碼功能保留但暫不強制）
 window.onload = function() {
   renderQuestion();
+
+  // 進站6秒後檢查是否要顯示 PWA 提示（先讓使用者看過畫面，不打斷）
+  setTimeout(checkAndShowPWAHint, 6000);
 };
 
 // 問卷邏輯
@@ -456,6 +586,9 @@ ${renderFooterNotice()}
 function showResult(d) {
   document.getElementById('loadingArea').classList.add('hidden');
   document.getElementById('resultArea').classList.remove('hidden');
+
+  // 使用者完成一次完整分析，代表他真的在用這個工具，追加觸發一次PWA提示檢查（已顯示過/已關閉過會自動略過）
+  checkAndShowPWAHint();
 
   const typeColors = { '防禦型': '#4CAF7D', '平衡型': '#E9FF2E', '積極型': '#E24B4A' };
   const typeColor = typeColors[d.type] || '#E9FF2E';
